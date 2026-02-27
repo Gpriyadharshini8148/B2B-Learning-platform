@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.apps import apps
 
 try:
-    app_models = apps.get_app_config('courses').get_models()
+    app_models = apps.get_app_config('notifications').get_models()
     for model in app_models:
         try:
             admin.site.register(model)
