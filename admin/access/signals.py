@@ -9,32 +9,54 @@ def send_user_approval_email(sender, instance, created, **kwargs):
     if getattr(instance, '_skip_signal', False):
         return
 
-    if created and instance.approval_status == 'pending':
-        # Determine recipient and message
-        is_signup = getattr(instance, '_is_signup', False)
-        
+    subject = None
+    message = None
+    recipient_email = None
+
+    if created and instance.approval_status == 'pending_otp' and getattr(instance, '_is_signup', False):
+        # 1. User Signup - Send OTP
+        subject = "Your Registration OTP"
+        message = (
+            f"Hello,\n\n"
+            f"Your OTP for registering at '{instance.organization.name}' is:\n"
+            f"{instance.otp}\n\n"
+            f"Please use this OTP to verify your account.\n"
+        )
+        recipient_email = instance.email
+
+    elif created and instance.approval_status == 'pending' and getattr(instance, '_is_org_signup', False):
+        # 2. Organization Signup - Notify Super Admin
+        org = instance.organization
+        accept_link = f"http://localhost:8000/api/bulk-cms/approve/org/{org.approval_token}/accept/"
+        reject_link = f"http://localhost:8000/api/bulk-cms/approve/org/{org.approval_token}/reject/"
+
+        subject = f"NEW REGISTRATION REQUEST: {org.name}"
+        message = (
+            f"Hello Super Admin,\n\n"
+            f"A new organization has requested to join:\n\n"
+            f"Organization: {org.name}\n"
+            f"Subdomain: {org.subdomain}\n\n"
+            f"Accept: {accept_link}\n"
+            f"Reject: {reject_link}\n"
+        )
+        recipient_email = settings.EMAIL_HOST_USER
+
+    elif created and instance.approval_status == 'pending':
+        # 3. Standard Approval or Bulk Import logic
         accept_link = f"http://localhost:8000/api/bulk-cms/approve/user/{instance.approval_token}/accept/"
         reject_link = f"http://localhost:8000/api/bulk-cms/approve/user/{instance.approval_token}/reject/"
         
+        is_signup = getattr(instance, '_is_signup', False)
         if is_signup:
             # Send to Organization Admin
-            subject = "New Learner Signup: Approval Required"
-            recipient_email = None
-            
-            # Find the admin of this organization (usually the owner/first user)
+            subject = "New User Signup: Approval Required"
             admin_user = User.objects.filter(organization=instance.organization).exclude(id=instance.id).first()
-            if admin_user:
-                recipient_email = admin_user.email
-            else:
-                # Fallback to super admin if no org admin found
-                recipient_email = settings.EMAIL_HOST_USER
-            
+            recipient_email = admin_user.email if admin_user else settings.EMAIL_HOST_USER
             message = (
-                f"A new learner '{instance.email}' has requested to join your organization '{instance.organization.name}'.\n\n"
+                f"A new user '{instance.email}' has requested to join your organization '{instance.organization.name}'.\n\n"
                 f"Please click the link below to approve or reject this request:\n\n"
                 f"Accept: {accept_link}\n"
                 f"Reject: {reject_link}\n\n"
-                f"If approved, the learner will be notified that they can log in."
             )
         else:
             # Bulk Import - Send to the User themselves
@@ -47,16 +69,16 @@ def send_user_approval_email(sender, instance, created, **kwargs):
                 f"Reject: {reject_link}\n\n"
                 "Once approved, you can proceed with login with your mail and password."
             )
+
+    if subject and message and recipient_email:
+        from concurrent.futures import ThreadPoolExecutor
+        executor = ThreadPoolExecutor(max_workers=1)
         
-        if recipient_email:
-            from concurrent.futures import ThreadPoolExecutor
-            executor = ThreadPoolExecutor(max_workers=1)
-            
-            def send_background_email(subj, msg, from_email, recipient):
-                try:
-                    send_mail(subj, msg, from_email, [recipient], fail_silently=False)
-                except Exception as e:
-                    print(f"Failed to send email: {e}")
-            
-            executor.submit(send_background_email, subject, message, settings.DEFAULT_FROM_EMAIL, recipient_email)
+        def send_background_email(subj, msg, from_email, recipient):
+            try:
+                send_mail(subj, msg, from_email, [recipient], fail_silently=False)
+            except Exception as e:
+                print(f"Failed to send email: {e}")
+        
+        executor.submit(send_background_email, subject, message, settings.DEFAULT_FROM_EMAIL, recipient_email)
 

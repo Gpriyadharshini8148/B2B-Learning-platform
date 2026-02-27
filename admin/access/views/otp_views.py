@@ -30,31 +30,30 @@ class VerifyOTPView(views.APIView):
                 approval_status='pending_otp'
             )
 
-            # OTP is correct! Clear it and move to 'pending' approval status
+            # OTP is correct! Clear it.
             user.otp = None
-            user.approval_status = 'pending'
-            user.save()
 
             # If this was the first user of a new organization, update the org status too
             org = user.organization
-            if org and org.approval_status == 'pending_otp':
+            if org and getattr(org, 'approval_status', '') == 'pending_otp':
+                user.approval_status = 'pending'
+                user.save()
                 org.approval_status = 'pending'
                 org.save()
                 
                 # Notify Super Admin about the new Organization request
                 self.notify_super_admin(org)
             else:
-                # It's a learner signup. 
-                # The Signal in signals.py will now trigger (on the second save) 
-                # but we need to make sure the signal knows it's a signup.
-                # Actually, our signal triggers on 'created'. 
-                # We might need to manually trigger the notification here or adjust the signal.
-                self.notify_org_admin(user)
+                # It's a user signup. Instantly approve them to allow login.
+                user.approval_status = 'approved'
+                user.is_active = True
+                user.is_verified = True
+                user.save()
 
-            return Response({"message": "otp verified successfully"}, status=status.HTTP_200_OK)
+            return Response({"message": "otp verification successfully"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
-            return Response({"error": "Invalid OTP or Email."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "invalid otp"}, status=status.HTTP_400_BAD_REQUEST)
 
     def notify_super_admin(self, org):
         super_admin_email = settings.EMAIL_HOST_USER
@@ -74,16 +73,16 @@ class VerifyOTPView(views.APIView):
         self.send_email_in_background(subject, message, super_admin_email)
 
     def notify_org_admin(self, user):
-        # Notify the Org Admin that a new learner is waiting
+        # Notify the Org Admin that a new user is waiting
         admin_user = User.objects.filter(organization=user.organization).exclude(id=user.id).first()
         recipient_email = admin_user.email if admin_user else settings.EMAIL_HOST_USER
         
         accept_link = f"http://localhost:8000/api/bulk-cms/approve/user/{user.approval_token}/accept/"
         reject_link = f"http://localhost:8000/api/bulk-cms/approve/user/{user.approval_token}/reject/"
         
-        subject = "New Learner Signup: Approval Required"
+        subject = "New User Signup: Approval Required"
         message = (
-            f"A new learner '{user.email}' has verified their email and wants to join your organization '{user.organization.name}'.\n\n"
+            f"A new user '{user.email}' has verified their email and wants to join your organization '{user.organization.name}'.\n\n"
             f"Accept: {accept_link}\n"
             f"Reject: {reject_link}\n"
         )

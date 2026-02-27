@@ -99,7 +99,7 @@ class OrganizationSignupSerializer(serializers.Serializer):
             
         return attrs
 
-class LearnerSignupSerializer(serializers.Serializer):
+class UserSignupSerializer(serializers.Serializer):
     username = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
     password = serializers.CharField(validators=[validate_password_strength])

@@ -9,7 +9,7 @@ from .views.role_views import RoleViewSet
 from .views.permission_views import PermissionViewSet
 from .views.audit_views import AuditLogViewSet
 from .authentication.views import CustomTokenObtainPairView
-from .views.signup_views import OrganizationSignupView, LearnerSignupView
+from .views.signup_views import OrganizationSignupView, UserSignupView
 from .views.otp_views import VerifyOTPView
 from .views.logout_views import LogoutView
 
@@ -29,7 +29,7 @@ def access_root(request):
         'token-refresh': request.build_absolute_uri('auth/refresh/'),
         'token-verify': request.build_absolute_uri('auth/verify/'),
         'organization-signup': request.build_absolute_uri('signup/organization/'),
-        'learner-signup': request.build_absolute_uri('signup/learner/'),
+        'user-signup': request.build_absolute_uri('signup/user/'),
         'verify-otp': request.build_absolute_uri('verify-otp/'),
     }
 
@@ -46,7 +46,7 @@ urlpatterns = [
     
     # Signup endpoints
     path('signup/organization/', OrganizationSignupView.as_view(), name='org-signup'),
-    path('signup/learner/', LearnerSignupView.as_view(), name='learner-signup'),
+    path('signup/user/', UserSignupView.as_view(), name='user-signup'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     
     # Auth endpoints
