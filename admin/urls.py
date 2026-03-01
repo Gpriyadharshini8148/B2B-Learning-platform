@@ -37,6 +37,7 @@ urlpatterns = [
     path('quizzes/', include('admin.quizzes.urls')),
     path('subscriptions/', include('admin.subscriptions.urls')),
     path('notifications/', include('admin.notifications.urls')),
+    path('super_admin/', include('admin.super_admin_urls')),
     
     # Bulk Data Management
     path('bulk-cms/', include([

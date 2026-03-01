@@ -13,7 +13,9 @@ class User(BaseModel):
     organization = models.ForeignKey(
         'organizations.Organization',
         on_delete=models.CASCADE,
-        related_name="users"
+        related_name="users",
+        null=True,
+        blank=True
     )
 
     first_name = models.CharField(max_length=255)
@@ -25,10 +27,13 @@ class User(BaseModel):
     is_active = models.BooleanField(default=False) 
     is_logged_in = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
     
     approval_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     approval_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     otp = models.CharField(max_length=10, null=True, blank=True)
+    otp_created_at = models.DateTimeField(null=True, blank=True)
 
     last_login = models.DateTimeField(blank=True, null=True)
 

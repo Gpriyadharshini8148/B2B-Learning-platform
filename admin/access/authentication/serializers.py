@@ -81,21 +81,20 @@ class LogoutSerializer(serializers.Serializer):
     refresh_token = serializers.CharField()
 
 class OrganizationSignupSerializer(serializers.Serializer):
-    username = serializers.CharField(required=False)
-    email = serializers.EmailField(required=False)
-    password = serializers.CharField(validators=[validate_password_strength])
-    organization_name = serializers.CharField()
+    admin_email = serializers.EmailField()
+    password = serializers.CharField(validators=[validate_password_strength], required=False)
+    name = serializers.CharField()
     subdomain = serializers.CharField()
 
     def validate(self, attrs):
-        email = attrs.get('username') or attrs.get('email')
+        email = attrs.get('admin_email')
         if not email:
-            raise serializers.ValidationError({"email": "Email is required."})
+            raise serializers.ValidationError({"admin_email": "Admin email is required."})
         
         try:
             django_validate_email(email)
         except DjangoValidationError:
-            raise serializers.ValidationError({"email": "Enter a valid email address."})
+            raise serializers.ValidationError({"admin_email": "Enter a valid email address."})
             
         return attrs
 
@@ -103,7 +102,7 @@ class UserSignupSerializer(serializers.Serializer):
     username = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
     password = serializers.CharField(validators=[validate_password_strength])
-    organization_subdomain = serializers.CharField()
+    organization_subdomain = serializers.CharField(required=False)
 
     def validate(self, attrs):
         email = attrs.get('username') or attrs.get('email')

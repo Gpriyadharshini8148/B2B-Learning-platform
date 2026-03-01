@@ -90,7 +90,10 @@ def get_allowed_queryset(user, model_name):
     base_qs = model.objects.all()
     
     # Super Admin can see EVERYTHING
-    if user.is_superuser or getattr(user, 'role', None) == 'SUPERADMIN':
+    from django.conf import settings
+    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+
+    if user.is_superuser or getattr(user, 'role', None) == 'SUPERADMIN' or getattr(user, 'email', '') == super_admin_email:
         return base_qs
         
     # Org Admin can only see their organization's data
@@ -98,19 +101,26 @@ def get_allowed_queryset(user, model_name):
         org = user.organization
         if model == Organization:
             return base_qs.filter(id=org.id)
-        elif hasattr(model, 'organization'):
-            return base_qs.filter(organization=org)
         elif model == User:
             return base_qs.filter(organization=org)
+        elif model == Course:
+            return base_qs.filter(organization_courses__organization=org)
         elif model == Enrollment:
-            return base_qs.filter(course__organization=org)
+            return base_qs.filter(course__organization_courses__organization=org)
         elif model == Quiz:
-            return base_qs.filter(course__organization=org)
+            return base_qs.filter(course__organization_courses__organization=org)
+        elif model == Subscription:
+            return base_qs.filter(organization=org)
+        # Notifications don't have an organization field, so they're either empty or global. We return none for org admins.
+        return base_qs.none()
         
     return base_qs.none()
 
 def enforce_import_data_rules(user, model_name, dataset):
-    if user.is_superuser or getattr(user, 'role', None) == 'SUPERADMIN':
+    from django.conf import settings
+    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+
+    if user.is_superuser or getattr(user, 'role', None) == 'SUPERADMIN' or getattr(user, 'email', '') == super_admin_email:
         return True, dataset, None
         
     if not (hasattr(user, 'organization') and user.organization):
@@ -124,19 +134,25 @@ def enforce_import_data_rules(user, model_name, dataset):
     if model == Organization:
         return False, dataset, "Only super admins can import Organizations."
 
-    if hasattr(model, 'organization'):
-        if 'organization_subdomain' in dataset.headers:
-            del dataset['organization_subdomain']
-        dataset.append_col([org.subdomain] * len(dataset), header='organization_subdomain')
-        return True, dataset, None
-        
     if model == User:
         if 'organization_subdomain' in dataset.headers:
             del dataset['organization_subdomain']
         dataset.append_col([org.subdomain] * len(dataset), header='organization_subdomain')
         return True, dataset, None
+        
+    if model == Subscription:
+        if 'organization' in dataset.headers:
+            del dataset['organization']
+        dataset.append_col([org.id] * len(dataset), header='organization')
+        return True, dataset, None
+        
+    if model == Notification:
+        return False, dataset, "Only super admins can import Notifications."
 
-    return True, dataset, None
+    if model in [Course, Enrollment, Quiz]:
+        return True, dataset, None
+
+    return False, dataset, "Permission denied for importing."
 
 # --- API View ---
 

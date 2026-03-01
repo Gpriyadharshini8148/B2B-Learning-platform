@@ -1,8 +1,10 @@
 from django.db import models
 from .subscription import Subscription
 from admin.access.models.base import BaseModel
+from admin.organizations.models.organization import Organization
 
 class Payment(BaseModel):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='payments', null=True)
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('completed', 'Completed'),

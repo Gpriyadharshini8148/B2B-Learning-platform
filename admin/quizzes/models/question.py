@@ -1,8 +1,10 @@
 from django.db import models
 from .quiz import Quiz
 from admin.access.models.base import BaseModel
+from admin.organizations.models.organization import Organization
 
 class Question(BaseModel):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='questions', null=True)
     QUESTION_TYPES = [
         ('multiple_choice', 'Multiple Choice'),
         ('true_false', 'True/False'),

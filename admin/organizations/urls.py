@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from .views.organization_views import OrganizationViewSet
 from .views.domain_views import DomainViewSet
 from .views.sso_views import SSOViewSet
+from .views.invitation_views import InviteUserView, AcceptInvitationView
 
 router = DefaultRouter()
 router.register('profile', OrganizationViewSet, basename='organization')
@@ -22,4 +23,6 @@ def org_root(request):
 urlpatterns = [
     path('', org_root, name='org-root'),
     path('', include(router.urls)),
+    path('invite/', InviteUserView.as_view(), name='invite-user'),
+    path('accept-invite/', AcceptInvitationView.as_view(), name='accept-invite'),
 ]

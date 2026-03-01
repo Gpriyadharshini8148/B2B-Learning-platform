@@ -81,8 +81,9 @@ class VerifyOTPView(views.APIView):
         reject_link = f"http://localhost:8000/api/bulk-cms/approve/user/{user.approval_token}/reject/"
         
         subject = "New User Signup: Approval Required"
+        org_name = f"your organization '{user.organization.name}'" if user.organization else "our platform"
         message = (
-            f"A new user '{user.email}' has verified their email and wants to join your organization '{user.organization.name}'.\n\n"
+            f"A new user '{user.email}' has verified their email and wants to join {org_name}.\n\n"
             f"Accept: {accept_link}\n"
             f"Reject: {reject_link}\n"
         )

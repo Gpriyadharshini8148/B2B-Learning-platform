@@ -13,12 +13,13 @@ def send_user_approval_email(sender, instance, created, **kwargs):
     message = None
     recipient_email = None
 
-    if created and instance.approval_status == 'pending_otp' and getattr(instance, '_is_signup', False):
+    if instance.approval_status == 'pending_otp' and getattr(instance, '_is_signup', False):
         # 1. User Signup - Send OTP
+        org_name = f"'{instance.organization.name}'" if instance.organization else "our platform"
         subject = "Your Registration OTP"
         message = (
             f"Hello,\n\n"
-            f"Your OTP for registering at '{instance.organization.name}' is:\n"
+            f"Your OTP for registering at {org_name} is:\n"
             f"{instance.otp}\n\n"
             f"Please use this OTP to verify your account.\n"
         )
@@ -52,8 +53,9 @@ def send_user_approval_email(sender, instance, created, **kwargs):
             subject = "New User Signup: Approval Required"
             admin_user = User.objects.filter(organization=instance.organization).exclude(id=instance.id).first()
             recipient_email = admin_user.email if admin_user else settings.EMAIL_HOST_USER
+            org_name = f"'{instance.organization.name}'" if instance.organization else "our platform"
             message = (
-                f"A new user '{instance.email}' has requested to join your organization '{instance.organization.name}'.\n\n"
+                f"A new user '{instance.email}' has requested to join {org_name}.\n\n"
                 f"Please click the link below to approve or reject this request:\n\n"
                 f"Accept: {accept_link}\n"
                 f"Reject: {reject_link}\n\n"

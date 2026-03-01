@@ -18,7 +18,10 @@ class CourseViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
 
-        if user.is_superuser:
+        from django.conf import settings
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+
+        if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
             return queryset
         
         # Courses for an organization are linked via OrganizationCourse
@@ -28,8 +31,11 @@ class CourseViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         course = serializer.save(instructor=self.request.user)
         
+        from django.conf import settings
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+
         # Automatically map the course to the admin's organization
-        if not self.request.user.is_superuser:
+        if not self.request.user.is_superuser and getattr(self.request.user, 'email', '') != super_admin_email:
             from ..models.organization_course import OrganizationCourse
             OrganizationCourse.objects.create(
                 organization=self.request.user.organization,

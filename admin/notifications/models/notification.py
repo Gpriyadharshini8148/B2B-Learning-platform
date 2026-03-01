@@ -1,7 +1,9 @@
 from django.db import models
 from admin.access.models.base import BaseModel
+from admin.organizations.models.organization import Organization
 
 class Notification(BaseModel):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='notifications', null=True)
     NOTIFICATION_TYPES = [
         ('system', 'System'),
         ('course', 'Course'),

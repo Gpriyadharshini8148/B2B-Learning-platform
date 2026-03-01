@@ -5,22 +5,28 @@ class IsSuperAdmin(permissions.BasePermission):
     Allows access only to super admins.
     """
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_superuser)
+        from django.conf import settings
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        return bool(request.user and (request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email))
 
 class IsOrganizationAdmin(permissions.BasePermission):
     """
     Allows access to Organization Admins for their own organization data.
     """
     def has_permission(self, request, view):
+        from django.conf import settings
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
         # Allow superusers and staff members to bypass the organization check
-        if request.user and (request.user.is_superuser or request.user.is_staff):
+        if request.user and (request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email or request.user.is_staff):
             return True
         # For regular org admins, we check for organization_id
         return bool(request.user and request.user.is_authenticated and hasattr(request.user, 'organization_id') and request.user.organization_id)
 
     def has_object_permission(self, request, view, obj):
+        from django.conf import settings
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
         # If the user is a super admin, they have full access
-        if request.user.is_superuser:
+        if request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email:
             return True
         
         # Check if the object belongs to the user's organization
@@ -46,7 +52,10 @@ class TenantSafeViewSetMixin:
         queryset = super().get_queryset()
         user = self.request.user
 
-        if user.is_superuser:
+        from django.conf import settings
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+
+        if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
             return queryset
         
         # If the model has an 'organization' field, filter by it
