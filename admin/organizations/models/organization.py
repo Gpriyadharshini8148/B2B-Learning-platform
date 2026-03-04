@@ -19,6 +19,17 @@ class Organization(BaseModel):
     
     approval_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     approval_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    
+    email = models.EmailField(null=True, blank=True)
+    website = models.URLField(null=True, blank=True)
+    logo = models.ForeignKey(
+        'access.Image',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="organization_logos"
+    )
+    description = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.name

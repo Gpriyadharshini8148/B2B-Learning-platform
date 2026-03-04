@@ -2,6 +2,8 @@ from rest_framework import views, status, permissions
 from rest_framework.response import Response
 from admin.organizations.models.organization import Organization
 from admin.access.models.user import User
+from admin.access.models.role import Role
+from admin.access.models.user_role import UserRole
 
 class OrgApprovalView(views.APIView):
     permission_classes = [permissions.AllowAny] # Links are public
@@ -20,11 +22,23 @@ class OrgApprovalView(views.APIView):
                 org.save()
                 
                 # Activate the pending users inside this organization (e.g. the admin who registered)
-                org.users.filter(approval_status='pending').update(
-                    is_active=True, 
-                    is_verified=True,
-                    approval_status='approved'
+                pending_users = org.users.filter(approval_status='pending')
+                
+                # Fetch or create the organization_admin role
+                role, _ = Role.objects.get_or_create(
+                    name='organization_admin',
+                    organization=org,
+                    defaults={'description': 'System-assigned Organization Admin'}
                 )
+                
+                for user in pending_users:
+                    user.is_active = True
+                    user.is_verified = True
+                    user.approval_status = 'approved'
+                    user.save()
+                    
+                    # Assign the role
+                    UserRole.objects.get_or_create(user=user, role=role)
                 
                 return Response({"message": "Organization approved successfully. You can now login."}, status=status.HTTP_200_OK)
             
@@ -52,6 +66,16 @@ class UserApprovalView(views.APIView):
                 user.is_active = True
                 user.is_verified = True
                 user.save()
+                
+                # Assign default 'learner' role if no roles exist
+                if not user.user_roles.exists():
+                    role, _ = Role.objects.get_or_create(
+                        name='learner',
+                        organization=user.organization,
+                        defaults={'description': 'System-assigned Learner'}
+                    )
+                    UserRole.objects.get_or_create(user=user, role=role)
+                
                 return Response({"message": "User account approved successfully. You can now login."}, status=status.HTTP_200_OK)
             
             elif action == 'reject':

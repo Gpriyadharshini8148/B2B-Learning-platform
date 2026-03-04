@@ -39,11 +39,11 @@ INSTALLED_APPS = [
     'admin.organizations.apps.OrganizationsConfig',
     'admin.users',
     'admin.access.apps.AccessConfig',
-    'admin.courses',
-    'admin.enrollments',
-    'admin.quizzes',
-    'admin.subscriptions',
-    'admin.notifications',
+    # 'admin.enrollments.apps.EnrollmentsConfig',
+    # 'admin.quizzes',
+
+    # 'admin.subscriptions',
+    # 'admin.notifications',
 
     # Third Party
     'import_export',
@@ -59,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'admin.access.middleware.audit_middleware.AuditLogMiddleware',
 ]
 
 ROOT_URLCONF = 'udemy.urls'
@@ -136,6 +137,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
@@ -144,13 +149,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'admin.access.authentication.authentication.CustomJWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        'admin.access.authentication.authentication.CustomSessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -181,3 +188,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = True  # For development use only
+
+# Razorpay Settings
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'your_razorpay_key_id')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'your_razorpay_key_secret')

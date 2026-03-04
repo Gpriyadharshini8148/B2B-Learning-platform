@@ -2,7 +2,13 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
+from django.utils import timezone
 from .models.user import User
+from .models.enrollment import Enrollment
+from .models.course_progress import CourseProgress
+from .models.lesson_progress import LessonProgress
+from .models.lesson import Lesson
+from concurrent.futures import ThreadPoolExecutor
 
 @receiver(post_save, sender=User)
 def send_user_approval_email(sender, instance, created, **kwargs):
@@ -73,7 +79,6 @@ def send_user_approval_email(sender, instance, created, **kwargs):
             )
 
     if subject and message and recipient_email:
-        from concurrent.futures import ThreadPoolExecutor
         executor = ThreadPoolExecutor(max_workers=1)
         
         def send_background_email(subj, msg, from_email, recipient):
@@ -84,3 +89,51 @@ def send_user_approval_email(sender, instance, created, **kwargs):
         
         executor.submit(send_background_email, subject, message, settings.DEFAULT_FROM_EMAIL, recipient_email)
 
+@receiver(post_save, sender=Enrollment)
+def create_initial_progress(sender, instance, created, **kwargs):
+    """
+    Automatically create CourseProgress and LessonProgress records
+    when a new Enrollment is created.
+    """
+    if created:
+        # 1. Create CourseProgress (Overall % tracker)
+        CourseProgress.objects.get_or_create(enrollment=instance)
+
+        # 2. Create LessonProgress entries for every lesson in this course
+        lessons = Lesson.objects.filter(section__course=instance.course)
+        for lesson in lessons:
+            LessonProgress.objects.get_or_create(
+                enrollment=instance,
+                lesson=lesson
+            )
+
+@receiver(post_save, sender=LessonProgress)
+def update_course_progress(sender, instance, **kwargs):
+    """
+    Update CourseProgress percentage when a LessonProgress is saved.
+    """
+    enrollment = instance.enrollment
+    course = enrollment.course
+    
+    # Total lessons in the course
+    total_lessons = Lesson.objects.filter(section__course=course).count()
+    
+    if total_lessons > 0:
+        # Number of completed lessons for this enrollment
+        completed_lessons = LessonProgress.objects.filter(
+            enrollment=enrollment, 
+            is_completed=True
+        ).count()
+        
+        progress_percentage = (completed_lessons / total_lessons) * 100
+        
+        # Update or create the course progress
+        progress, _ = CourseProgress.objects.get_or_create(enrollment=enrollment)
+        progress.progress_percentage = round(progress_percentage, 2)
+        
+        if progress_percentage >= 100:
+            progress.completed_at = timezone.now()
+        else:
+            progress.completed_at = None
+            
+        progress.save()

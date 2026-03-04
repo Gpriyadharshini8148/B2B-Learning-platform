@@ -1,5 +1,6 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
+from rest_framework.authentication import SessionAuthentication
 from admin.access.models.user import User
 
 from rest_framework_simplejwt.settings import api_settings
@@ -25,3 +26,18 @@ class CustomJWTAuthentication(JWTAuthentication):
             raise AuthenticationFailed('User is inactive', code='user_inactive')
 
         return user
+
+class CustomSessionAuthentication(SessionAuthentication):
+    def authenticate(self, request):
+        result = super().authenticate(request)
+        if result:
+            user, auth = result
+            try:
+                # Attempt to find the custom User model instance by email.
+                # This allows session-authenticated users to be treated as our custom User model.
+                custom_user = User.objects.get(email=user.email)
+                return (custom_user, auth)
+            except User.DoesNotExist:
+                # Fallback to the original user if no custom profile exists.
+                pass
+        return result

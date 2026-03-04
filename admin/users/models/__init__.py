@@ -1,2 +1,1 @@
-from .department import *
-from .user_department import *
+# Moved to admin/access/models

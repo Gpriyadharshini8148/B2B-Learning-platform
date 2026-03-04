@@ -1,0 +1,4 @@
+title,description,organization_subdomain,instructor_email,level,language,is_published,is_global
+"Intro to Python (2025)","A course for beginners to learn Python.","mailinatoredu","instructor@mailinator.com","Beginner","English",true,true
+"Mastering Django CMS","Advanced course to master building CMS projects.","mailinatoredu","priya123@mailinator.com","Advanced","English",false,true
+"Backend API Design","Design and implement robust APIs with Python.","mailinatoredu","instructor19@mailinator.com","Intermediate","English",true,false

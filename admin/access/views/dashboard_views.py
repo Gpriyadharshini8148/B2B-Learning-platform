@@ -1,10 +1,12 @@
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
-from admin.courses.models.course import Course
-from admin.courses.models.category import Category
-from admin.enrollments.models.enrollment import Enrollment
-
+from django.conf import settings
+from admin.access.models.course import Course
+from admin.access.models.category import Category
+from admin.access.models.enrollment import Enrollment
+from admin.access.models.lesson_progress import LessonProgress
+from admin.organizations.models.organization import Organization
 from admin.access.models.user import User as CustomUser
 from admin.access.models.user_role import UserRole
 
@@ -48,7 +50,6 @@ class UserDashboardView(views.APIView):
             })
 
         # Determine actual role properly from the database or logic
-        from django.conf import settings
         super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
 
         role = "user"  # Default fallback
@@ -89,8 +90,6 @@ class UserDashboardView(views.APIView):
             response_payload["organization"] = org_data
 
         if role == "super_admin":
-            from admin.organizations.models.organization import Organization
-            
             # exclude the super admin from user queries
             admin_qs = CustomUser.objects.exclude(email=super_admin_email).exclude(is_superuser=True)
             
@@ -225,7 +224,6 @@ class UserDashboardView(views.APIView):
             
             # Fetch recent activity (lessons)
             try:
-                from admin.enrollments.models.lesson_progress import LessonProgress
                 recent_lessons = LessonProgress.objects.filter(
                     enrollment__user=user
                 ).select_related('lesson', 'enrollment__course').order_by('-updated_at')[:5]

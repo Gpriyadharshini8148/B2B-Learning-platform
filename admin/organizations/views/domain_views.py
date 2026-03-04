@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import viewsets
 from ..models.organization_domain import OrganizationDomain
 from ..serializers.domain_serializer import OrganizationDomainSerializer
@@ -9,7 +10,6 @@ class DomainViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        from django.conf import settings
         super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
         if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
             return OrganizationDomain.objects.all()

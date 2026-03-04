@@ -1,11 +1,13 @@
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from admin.access.models.user import User
 from django.contrib.auth.hashers import check_password
 from django.core.validators import validate_email as django_validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
 import re
 from django.conf import settings
+
 def validate_password_strength(value):
     if not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', value):
         raise serializers.ValidationError(
@@ -57,7 +59,6 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
 
         if user.is_logged_in:
             if user.email != getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com'):
-                from rest_framework.exceptions import ValidationError
                 raise ValidationError({"error": "User already logged in"})
 
         user.is_logged_in = True

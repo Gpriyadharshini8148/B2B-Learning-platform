@@ -1,34 +1,56 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers, pagination
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth.hashers import make_password
+from django.core.signing import TimestampSigner
 from drf_spectacular.utils import extend_schema
+from admin.organizations.serializers.manage_organization_serializer import (
+    ManageOrganizationListSerializer, 
+    ManageOrganizationCreateSerializer
+)
+from django.conf import settings
 from admin.access.permissions.tenant_permissions import IsSuperAdmin
 from admin.organizations.models.organization import Organization
 from admin.access.models.user import User as CustomUser
 from admin.access.models.role import Role
 from admin.access.models.user_role import UserRole
 
-class ManageOrganizationsViewSet(viewsets.ViewSet):
+
+class ManageOrganizationsViewSet(viewsets.GenericViewSet):
     """
     Manage Organizations API for Super Admins.
     Allows creating, viewing, updating, activating/deactivating, and deleting Orgs.
     """
     permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+    queryset = Organization.objects.all().order_by('-created_at')
+    serializer_class = ManageOrganizationListSerializer
+    pagination_class = pagination.PageNumberPagination
 
-    @extend_schema(responses={200: list})
+    @extend_schema(responses={200: ManageOrganizationListSerializer(many=True)})
     def list(self, request):
-        orgs = Organization.objects.all().order_by('-created_at')
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        
         data = []
-        for org in orgs:
+        source = page if page is not None else queryset
+        
+        for org in source:
             data.append({
                 "id": org.id,
                 "name": org.name,
                 "subdomain": org.subdomain,
                 "status": "active" if org.is_active else "inactive"
             })
+            
+        if page is not None:
+            return self.get_paginated_response(data)
+            
         return Response(data, status=status.HTTP_200_OK)
 
-    @extend_schema(request=dict, responses={201: dict})
+    @extend_schema(
+        request=ManageOrganizationCreateSerializer,
+        responses={201: dict}
+    )
     def create(self, request):
         name = request.data.get("name")
         subdomain = request.data.get("subdomain")
@@ -71,7 +93,14 @@ class ManageOrganizationsViewSet(viewsets.ViewSet):
 
         UserRole.objects.create(user=admin_user, role=admin_role)
 
+        # Reset URL generation (for response only - email is sent via signal)
+        signer = TimestampSigner()
+        token = signer.sign(admin_user.email)
+        reset_url = f"http://localhost:8000/api/access/auth/reset-password/?token={token}"
+
         return Response({
+            "message": f"Organization {org.name} created. The reset password link is sent to the organization mail: {email}.",
+            "reset_password_url": reset_url,
             "id": org.id,
             "name": org.name,
             "subdomain": org.subdomain,
@@ -141,7 +170,34 @@ class ManageOrganizationsViewSet(viewsets.ViewSet):
 
         return Response({"error": "Please provide is_active field to patch."}, status=status.HTTP_400_BAD_REQUEST)
 
-    from rest_framework.decorators import action
+    @action(detail=True, methods=['post'])
+    def reset_password(self, request, pk=None):
+        """
+        Manually reset the password for the Organization Admin.
+        """
+        try:
+            org = Organization.objects.get(pk=pk)
+            new_password = request.data.get("password")
+            
+            if not new_password:
+                return Response({"error": "New password is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Find the primary admin
+            admin_user = CustomUser.objects.filter(
+                organization=org, 
+                userrole__role__name__in=['organization_admin', 'admin', 'org_admin']
+            ).first()
+
+            if not admin_user:
+                return Response({"error": "No admin user found for this organization."}, status=status.HTTP_404_NOT_FOUND)
+
+            admin_user.password_hash = make_password(new_password)
+            admin_user.save()
+
+            return Response({"message": f"Password for {admin_user.email} has been updated successfully."})
+        except Organization.DoesNotExist:
+            return Response({"error": "Organization not found."}, status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         try:

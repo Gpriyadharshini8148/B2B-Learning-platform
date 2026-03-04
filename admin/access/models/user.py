@@ -47,3 +47,13 @@ class User(BaseModel):
         authenticated in templates or by permissions policies.
         """
         return True
+
+    @property
+    def is_org_admin(self):
+        """
+        Checks if the user has an administrative role within their organization.
+        """
+        # User defined roles in admin.access.models.role
+        admin_roles = ['organization_admin', 'admin', 'super_admin', 'staff']
+        return self.user_roles.filter(role__name__in=admin_roles).exists() or self.is_superuser
+

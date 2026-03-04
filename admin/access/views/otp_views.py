@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema
 from admin.organizations.models.organization import Organization
 from admin.access.models.user import User
 from admin.access.authentication.serializers import VerifyOTPSerializer
+from concurrent.futures import ThreadPoolExecutor
 
 class VerifyOTPView(views.APIView):
     """
@@ -90,7 +91,6 @@ class VerifyOTPView(views.APIView):
         self.send_email_in_background(subject, message, recipient_email)
 
     def send_email_in_background(self, subject, message, recipient_list):
-        from concurrent.futures import ThreadPoolExecutor
         executor = ThreadPoolExecutor(max_workers=1)
         
         def send_background_email(subj, msg, from_email, recipient):

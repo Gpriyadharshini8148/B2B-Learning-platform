@@ -1,21 +1,20 @@
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
-from django.core.mail import send_mail
-from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from drf_spectacular.utils import extend_schema
+from admin.organizations.serializers.invitation_serializer import InviteUserSerializer, AcceptInvitationSerializer
 from admin.organizations.models.invitation import Invitation
 from admin.access.models.user import User
 from admin.access.models.role import Role
 from admin.access.models.user_role import UserRole
 
-class InviteUserView(views.APIView):
+class OrgInviteNewUserView(views.APIView):
     """
     API for Organization admins to invite a user to their organization.
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    @extend_schema(request={'email': str, 'role': str})
+    @extend_schema(request=InviteUserSerializer)
     def post(self, request):
         user = request.user
         if not user.organization:
@@ -42,20 +41,9 @@ class InviteUserView(views.APIView):
         base_url = request.build_absolute_uri('/')[:-1] # Remove trailing slash
         invite_url = f"{base_url}/api/organizations/accept-invite/?token={invitation.token}"
         
-        try:
-            send_mail(
-                subject=f"Invitation to join {user.organization.name}",
-                message=f"You have been invited to join {user.organization.name}. Click the following API link to accept the invitation: {invite_url}",
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
-                recipient_list=[email],
-                fail_silently=True,
-            )
-        except Exception:
-            pass
-
         return Response({
-            "message": "Invitation sent successfully.",
-            "invite_url": invite_url # For client/testing purposes
+            "message": f"Invitation created for {email}. Access link: {invite_url}",
+            "invite_url": invite_url 
         }, status=status.HTTP_200_OK)
 
 
@@ -65,9 +53,9 @@ class AcceptInvitationView(views.APIView):
     """
     permission_classes = [permissions.AllowAny]
 
-    @extend_schema(request={'token': str, 'first_name': str, 'last_name': str}, responses={200: dict})
+    @extend_schema(request=AcceptInvitationSerializer, responses={200: dict})
     def post(self, request):
-        token = request.data.get('token')
+        token = request.data.get('token') or request.query_params.get('token')
         first_name = request.data.get('first_name', '')
         last_name = request.data.get('last_name', '')
         password = request.data.get('password')

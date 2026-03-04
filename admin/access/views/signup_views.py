@@ -10,6 +10,9 @@ from admin.access.models.user import User
 from admin.access.authentication.serializers import OrganizationSignupSerializer, UserSignupSerializer
 from django.utils import timezone
 import datetime
+import string
+import random
+
 class OrganizationSignupView(views.APIView):
     """
     Public API for Organizations to register.
@@ -29,8 +32,6 @@ class OrganizationSignupView(views.APIView):
         
         # If no password provided, generate a secure temporary one
         if not password:
-            import string
-            import random
             password = ''.join(random.choices(string.ascii_letters + string.digits, k=16)) + "A1!"
             
         org_name = request.data.get('name')
@@ -100,7 +101,6 @@ class UserSignupView(views.APIView):
             except Organization.DoesNotExist:
                 return Response({"error": "The specified organization does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-        import random
         otp = str(random.randint(100000, 999999))
 
         existing_user = User.objects.filter(email=email).first()

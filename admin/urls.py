@@ -4,6 +4,20 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from .import_export_api import GenericImportAPIView, GenericExportAPIView
 from admin.access.views.approval_views import OrgApprovalView, UserApprovalView
+from rest_framework.routers import DefaultRouter
+from admin.organizations.views import (
+    OrgCourseViewSet, OrgCategoryViewSet, OrgLearningPathViewSet, 
+    OrgLessonViewSet, OrgSectionViewSet, OrgSkillViewSet, OrgVideoViewSet
+)
+
+course_router = DefaultRouter()
+course_router.register('courses', OrgCourseViewSet, basename='courses')
+course_router.register('categories', OrgCategoryViewSet, basename='categories')
+course_router.register('learning-paths', OrgLearningPathViewSet, basename='learning-paths')
+course_router.register('lessons', OrgLessonViewSet, basename='lessons')
+course_router.register('sections', OrgSectionViewSet, basename='sections')
+course_router.register('skills', OrgSkillViewSet, basename='skills')
+course_router.register('videos', OrgVideoViewSet, basename='videos')
 
 @api_view(['GET'])
 def admin_api_root(request, format=None):
@@ -14,11 +28,6 @@ def admin_api_root(request, format=None):
         'organizations-cms': reverse('org-root', request=request, format=format),
         'users-cms': reverse('users-root', request=request, format=format),
         'access-cms': reverse('access-root', request=request, format=format),
-        'courses-cms': reverse('courses-root', request=request, format=format),
-        'enrollments-cms': reverse('enroll-root', request=request, format=format),
-        'quizzes-cms': reverse('quiz-root', request=request, format=format),
-        'subscriptions-cms': reverse('sub-root', request=request, format=format),
-        'notifications-cms': reverse('notif-root', request=request, format=format),
         'bulk-import': '/api/admin/bulk-cms/import/{model_name}/',
         'bulk-export': '/api/admin/bulk-cms/export/{model_name}/',
         'swagger-docs': reverse('swagger-ui', request=request, format=format),
@@ -29,14 +38,15 @@ urlpatterns = [
     path('', admin_api_root, name='admin-api-root'),
     path('bulk-cms/approve/org/<uuid:token>/<str:action>/', OrgApprovalView.as_view(), name='org-approve'),
     path('bulk-cms/approve/user/<uuid:token>/<str:action>/', UserApprovalView.as_view(), name='user-approve'),
+    
     path('organizations/', include('admin.organizations.urls')),
     path('users/', include('admin.users.urls')),
     path('access/', include('admin.access.urls')),
-    path('courses/', include('admin.courses.urls')),
-    path('enrollments/', include('admin.enrollments.urls')),
-    path('quizzes/', include('admin.quizzes.urls')),
-    path('subscriptions/', include('admin.subscriptions.urls')),
-    path('notifications/', include('admin.notifications.urls')),
+    
+    # Nested Content Management
+    path('courses/', include(course_router.urls)),
+    
+    # Other management (Super Admin entry point)
     path('super_admin/', include('admin.super_admin_urls')),
     
     # Bulk Data Management

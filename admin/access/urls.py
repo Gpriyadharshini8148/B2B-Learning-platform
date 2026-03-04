@@ -1,4 +1,5 @@
 from django.urls import path, include
+from django.conf import settings
 from rest_framework.routers import DefaultRouter
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -14,12 +15,14 @@ from .views.otp_views import VerifyOTPView
 from .views.logout_views import LogoutView
 from .views.dashboard_views import UserDashboardView
 from .views.password_views import ResetPasswordView
+from .views.image_views import ImageViewSet
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'roles', RoleViewSet, basename='role')
 router.register(r'permissions', PermissionViewSet, basename='permission')
 router.register(r'audit-logs', AuditViewSet, basename='auditlog')
+router.register(r'images', ImageViewSet, basename='image')
 
 @api_view(['GET'])
 def access_root(request):
@@ -35,7 +38,6 @@ def access_root(request):
         'verify-otp': request.build_absolute_uri('verify-otp/'),
     }
 
-    from django.conf import settings
     super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
 
     if request.user and request.user.is_authenticated and (request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email):
