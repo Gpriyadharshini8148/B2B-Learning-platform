@@ -6,3 +6,4 @@ class AccessConfig(AppConfig):
 
     def ready(self):
         import admin.access.signals
+        import admin.access.authentication.extensions

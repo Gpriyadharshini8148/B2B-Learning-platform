@@ -7,12 +7,16 @@ from admin.access.models.course import Course
 from admin.access.models.enrollment import Enrollment
 from admin.organizations.models.invitation import Invitation
 
+from drf_spectacular.utils import extend_schema
+from ..serializers.dashboard_serializers import OrgOverviewResponseSerializer
+
 class OrgOverviewAPIView(APIView):
     """
     Provides a high-level summary of the organization's metrics.
     """
     permission_classes = [permissions.IsAuthenticated, IsOrganizationAdmin]
 
+    @extend_schema(responses={200: OrgOverviewResponseSerializer})
     def get(self, request):
         user = request.user
         

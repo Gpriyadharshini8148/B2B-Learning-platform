@@ -36,7 +36,7 @@ def admin_api_root(request, format=None):
 
 urlpatterns = [
     path('', admin_api_root, name='admin-api-root'),
-    path('bulk-cms/approve/org/<uuid:token>/<str:action>/', OrgApprovalView.as_view(), name='org-approve'),
+    path('bulk-cms/approve/org/<str:token>/<str:action>/', OrgApprovalView.as_view(), name='org-approve'),
     path('bulk-cms/approve/user/<uuid:token>/<str:action>/', UserApprovalView.as_view(), name='user-approve'),
     
     path('organizations/', include('admin.organizations.urls')),

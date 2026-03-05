@@ -14,6 +14,7 @@ from admin.organizations.models.organization import Organization
 from admin.access.models.user import User as CustomUser
 from admin.access.models.role import Role
 from admin.access.models.user_role import UserRole
+from admin.access.authentication.keycloak_manager import create_organization_group, register_user_with_role, setup_base_roles
 
 
 class ManageOrganizationsViewSet(viewsets.GenericViewSet):
@@ -55,11 +56,12 @@ class ManageOrganizationsViewSet(viewsets.GenericViewSet):
         name = request.data.get("name")
         subdomain = request.data.get("subdomain")
         email = request.data.get("email")
+        password = request.data.get("password") or "Admin@123"
 
         if not all([name, subdomain, email]):
             return Response({"error": "name, subdomain, and email are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if Organization.objects.filter(subdomain=subdomain).exists():
+        if Organization.objects.filter(subdomain__iexact=subdomain).exists():
             return Response({"error": "Organization with this subdomain already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
         if CustomUser.objects.filter(email=email).exists():
@@ -69,7 +71,8 @@ class ManageOrganizationsViewSet(viewsets.GenericViewSet):
         org = Organization.objects.create(
             name=name,
             subdomain=subdomain,
-            is_active=True, # Active by default when created by Super Admin
+            is_active=True,
+            is_verified=True,
             approval_status='approved'
         )
 
@@ -86,21 +89,38 @@ class ManageOrganizationsViewSet(viewsets.GenericViewSet):
             first_name="Admin",
             last_name=name,
             organization=org,
-            password_hash=make_password("Admin@123"), # Default password, easily reset
+            password_hash=make_password(password),
             is_active=True,
+            is_verified=True,
             approval_status='approved'
         )
 
         UserRole.objects.create(user=admin_user, role=admin_role)
 
-        # Reset URL generation (for response only - email is sent via signal)
-        signer = TimestampSigner()
-        token = signer.sign(admin_user.email)
-        reset_url = f"http://localhost:8000/api/access/auth/reset-password/?token={token}"
+        # --- Hierarchical Keycloak Integration ---
+        # 1. Ensure base roles exist
+        setup_base_roles()
+
+        # 2. Create the Organization Group
+        group_success, group_msg = create_organization_group(subdomain)
+        
+        # 3. Register User and set password
+        kc_user_success, kc_user_msg = register_user_with_role(
+            email=email, 
+            password=password,
+            role_name="organization_admin",
+            organization_subdomain=subdomain,
+            enabled=True
+        )
+
+        keycloak_msg = ""
+        if group_success and kc_user_success:
+            keycloak_msg = " Keycloak group and admin user successfully provisioned."
+        else:
+            keycloak_msg = f" Note: Keycloak provisioning hit issues: {group_msg if not group_success else kc_user_msg}"
 
         return Response({
-            "message": f"Organization {org.name} created. The reset password link is sent to the organization mail: {email}.",
-            "reset_password_url": reset_url,
+            "message": f"Organization {org.name} created.{keycloak_msg} Admin user is: {email}.",
             "id": org.id,
             "name": org.name,
             "subdomain": org.subdomain,
@@ -212,13 +232,22 @@ class ManageOrganizationsViewSet(viewsets.GenericViewSet):
             org.save()
             
             # Activate the pending admins inside this organization
-            CustomUser.objects.filter(organization=org, approval_status='pending').update(
-                is_active=True, 
-                is_verified=True,
-                approval_status='approved'
-            )
+            pending_admins = CustomUser.objects.filter(organization=org, approval_status='pending')
             
-            return Response({"message": "Organization and its admin approved successfully. Admin can now login."}, status=status.HTTP_200_OK)
+            for admin in pending_admins:
+                admin.is_active = True
+                admin.is_verified = True
+                admin.approval_status = 'approved'
+                admin.save()
+                
+                # Register the approved Admin in Keycloak
+                register_user_with_role(
+                    email=admin.email,
+                    role_name="organization_admin",
+                    organization_subdomain=org.subdomain
+                )
+            
+            return Response({"message": "Organization and its admin approved successfully in DB and Keycloak."}, status=status.HTTP_200_OK)
         except Organization.DoesNotExist:
             return Response({"error": "Organization not found"}, status=status.HTTP_404_NOT_FOUND)
 

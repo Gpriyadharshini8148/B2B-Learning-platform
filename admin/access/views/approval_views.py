@@ -4,52 +4,78 @@ from admin.organizations.models.organization import Organization
 from admin.access.models.user import User
 from admin.access.models.role import Role
 from admin.access.models.user_role import UserRole
+from admin.access.authentication.keycloak_manager import register_user_with_role
 
 class OrgApprovalView(views.APIView):
     permission_classes = [permissions.AllowAny] # Links are public
 
     def get(self, request, token, action):
-        try:
-            org = Organization.objects.get(approval_token=token)
-            
-            if org.approval_status != 'pending':
-                return Response({"message": f"Organization already {org.approval_status}"}, status=status.HTTP_400_BAD_GATEWAY)
+        from django.core import signing
+        from admin.access.authentication.keycloak_manager import create_organization_group, setup_base_roles
+        from django.contrib.auth.hashers import make_password
 
-            if action == 'accept':
-                org.approval_status = 'approved'
-                org.is_active = True
-                org.is_verified = True
-                org.save()
-                
-                # Activate the pending users inside this organization (e.g. the admin who registered)
-                pending_users = org.users.filter(approval_status='pending')
-                
-                # Fetch or create the organization_admin role
-                role, _ = Role.objects.get_or_create(
-                    name='organization_admin',
-                    organization=org,
-                    defaults={'description': 'System-assigned Organization Admin'}
-                )
-                
-                for user in pending_users:
-                    user.is_active = True
-                    user.is_verified = True
-                    user.approval_status = 'approved'
-                    user.save()
-                    
-                    # Assign the role
-                    UserRole.objects.get_or_create(user=user, role=role)
-                
-                return Response({"message": "Organization approved successfully. You can now login."}, status=status.HTTP_200_OK)
-            
-            elif action == 'reject':
-                org.approval_status = 'rejected'
-                org.is_active = False
-                org.save()
-                return Response({"message": f"Account approval rejected by {org.name}"}, status=status.HTTP_200_OK)
-            
-        except Organization.DoesNotExist:
-            return Response({"error": "Invalid token"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            # Token expires after 7 days
+            data = signing.loads(token, max_age=86400 * 7)
+        except signing.BadSignature:
+            return Response({"error": "Invalid or expired approval link"}, status=status.HTTP_400_BAD_REQUEST)
+
+        org_name = data.get('name')
+        subdomain = data.get('subdomain')
+        email = data.get('email')
+        password = data.get('password')
+
+        if action == 'accept':
+            # Check if subdomain or email were taken while the request was pending
+            if Organization.objects.filter(subdomain=subdomain).exists():
+                return Response({"error": "This subdomain has already been registered by another organization."}, status=status.HTTP_400_BAD_REQUEST)
+            if User.objects.filter(email=email).exists():
+                 return Response({"error": "This email is already in use by another user."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Insert into the database NOW
+            org = Organization.objects.create(
+                name=org_name,
+                subdomain=subdomain,
+                approval_status='approved',
+                is_active=True,
+                is_verified=True
+            )
+
+            user = User.objects.create(
+                organization=org,
+                email=email,
+                first_name="Admin",
+                last_name=org_name,
+                password_hash=make_password(password),
+                is_active=True,
+                is_verified=True,
+                approval_status='approved'
+            )
+
+            # Assign roles
+            role, _ = Role.objects.get_or_create(
+                name='organization_admin',
+                organization=org,
+                defaults={'description': 'System-assigned Organization Admin'}
+            )
+            UserRole.objects.get_or_create(user=user, role=role)
+
+            # Setup Keycloak
+            setup_base_roles()
+            create_organization_group(subdomain)
+            register_user_with_role(
+                email=user.email,
+                role_name="organization_admin",
+                organization_subdomain=org.subdomain,
+                password=password
+            )
+
+            return Response({"message": f"Organization '{org_name}' successfully created, approved, and registered in Keycloak."}, status=status.HTTP_200_OK)
+
+        elif action == 'reject':
+            return Response({"message": f"Organization request for '{org_name}' has been rejected. No database records were created."}, status=status.HTTP_200_OK)
+        
+        return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
 
 class UserApprovalView(views.APIView):
     permission_classes = [permissions.AllowAny]

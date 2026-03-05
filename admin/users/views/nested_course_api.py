@@ -17,6 +17,13 @@ from admin.access.models.option import Option
 from admin.access.models.enrollment import Enrollment
 from admin.access.models.lesson_progress import LessonProgress
 from admin.access.models.course_progress import CourseProgress
+from drf_spectacular.utils import extend_schema
+from ..serializers.nested_serializers import (
+    NestedCourseListSerializer, NestedCourseDetailSerializer,
+    NestedSectionListSerializer, NestedSectionSerializer,
+    NestedLessonListSerializer, NestedLessonDetailSerializer,
+    NestedMarkCompleteResponseSerializer
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,6 +83,7 @@ class NestedCourseListAPIView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses={200: NestedCourseListSerializer})
     def get(self, request):
         org = getattr(request.user, 'organization', None)
         courses = Course.objects.filter(
@@ -104,6 +112,7 @@ class NestedCourseDetailAPIView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses={200: NestedCourseDetailSerializer})
     def get(self, request, course_id):
         course = _get_course(course_id)
         enrollment = _get_enrollment(request.user, course_id)
@@ -130,6 +139,7 @@ class NestedSectionListAPIView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses={200: NestedSectionListSerializer})
     def get(self, request, course_id):
         _get_enrollment(request.user, course_id)
         course = _get_course(course_id)
@@ -183,6 +193,7 @@ class NestedLessonListAPIView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses={200: NestedLessonListSerializer})
     def get(self, request, course_id, section_id):
         enrollment = _get_enrollment(request.user, course_id)
         course = _get_course(course_id)
@@ -225,6 +236,7 @@ class NestedLessonDetailAPIView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses={200: NestedLessonDetailSerializer})
     def get(self, request, course_id, section_id, lesson_id):
         enrollment = _get_enrollment(request.user, course_id)
         course = _get_course(course_id)
@@ -322,6 +334,10 @@ class NestedMarkCompleteAPIView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        request=None, 
+        responses={200: NestedMarkCompleteResponseSerializer}
+    )
     def post(self, request, course_id, section_id, lesson_id):
         enrollment = _get_enrollment(request.user, course_id)
         course = _get_course(course_id)

@@ -1,0 +1,50 @@
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=Udemy
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+    ports:
+      - "5433:5432" # Host:Container (using 5433 on host to avoid conflict with local postgres)
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://db:5432/postgres
+      - KC_DB_USERNAME=postgres
+      - KC_DB_PASSWORD=1234
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+  web:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_NAME=Udemy
+      - DB_USER=postgres
+      - DB_PASSWORD=1234
+      - DB_HOST=db
+      - DB_PORT=5432
+      - KEYCLOAK_SERVER_URL=http://keycloak:8080/
+      - KEYCLOAK_REALM=udemy-clone
+      - KEYCLOAK_CLIENT_ID=django-backend
+      - KEYCLOAK_CLIENT_SECRET=SFEAEnHW8CW7kOuu98jJakDtR5bfoMFC
+    depends_on:
+      - db
+      - keycloak
+
+volumes:
+  postgres_data:

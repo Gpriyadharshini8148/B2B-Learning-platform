@@ -1,19 +1,25 @@
-from rest_framework_simplejwt.views import TokenObtainPairView
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions
-from .serializers import CustomTokenObtainPairSerializer
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .serializers import KeycloakLoginSerializer
 
-class CustomTokenObtainPairView(TokenObtainPairView):
+class KeycloakTokenObtainPairView(APIView):
     """
-    Extends generic TokenObtainPairView to include custom 
-    organization and user details in the JWT token payload.
+    View to authenticate users via Keycloak.
+    This replaces the standard SimpleJWT login to ensure all authentication
+    goes through Keycloak.
     """
-    serializer_class = CustomTokenObtainPairSerializer
+    authentication_classes = [] # Don't try to authenticate the login request
     permission_classes = [permissions.AllowAny]
+    serializer_class = KeycloakLoginSerializer
 
     @extend_schema(
-        request=CustomTokenObtainPairSerializer,
-        responses={200: CustomTokenObtainPairSerializer}
+        request=KeycloakLoginSerializer,
+        responses={200: KeycloakLoginSerializer}
     )
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

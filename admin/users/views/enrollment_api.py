@@ -12,6 +12,7 @@ class StudentEnrollmentViewSet(viewsets.ModelViewSet):
     GET /api/user/enrollments/{id}
     PUT /api/user/enrollments/{id}/archive
     """
+    queryset = Enrollment.objects.none() # Help drf-spectacular detect the model
     serializer_class = StudentEnrollmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 

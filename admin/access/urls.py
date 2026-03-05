@@ -3,13 +3,11 @@ from django.conf import settings
 from rest_framework.routers import DefaultRouter
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
-
 from .views.user_views import UserViewSet
 from .views.role_views import RoleViewSet
 from .views.permission_views import PermissionViewSet
 from .views.audit_views import AuditViewSet
-from .authentication.views import CustomTokenObtainPairView
+from .authentication.views import KeycloakTokenObtainPairView
 from .views.signup_views import OrganizationSignupView, UserSignupView
 from .views.otp_views import VerifyOTPView
 from .views.logout_views import LogoutView
@@ -31,8 +29,7 @@ def access_root(request):
     """
     urls = {
         'login': request.build_absolute_uri('auth/login/'),
-        'token-refresh': request.build_absolute_uri('auth/refresh/'),
-        'token-verify': request.build_absolute_uri('auth/verify/'),
+        'keycloak-login': request.build_absolute_uri('auth/keycloak/login/'),
         'organization-signup': request.build_absolute_uri('signup/organization/'),
         'user-signup': request.build_absolute_uri('signup/user/'),
         'verify-otp': request.build_absolute_uri('verify-otp/'),
@@ -57,10 +54,9 @@ urlpatterns = [
     path('user/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     
     # Auth endpoints
-    path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/login/', KeycloakTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/keycloak/login/', KeycloakTokenObtainPairView.as_view(), name='keycloak_login'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
     # Dashboard endpoint
     path('dashboard/', UserDashboardView.as_view(), name='dashboard'),

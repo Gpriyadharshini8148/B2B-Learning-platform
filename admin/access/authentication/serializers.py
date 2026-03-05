@@ -1,4 +1,3 @@
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from admin.access.models.user import User
@@ -6,7 +5,10 @@ from django.contrib.auth.hashers import check_password
 from django.core.validators import validate_email as django_validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
 import re
+from admin.access.models import Role, UserRole
+from admin.organizations.models.organization import Organization
 from django.conf import settings
+from .keycloak_auth import keycloak_openid, authenticate_with_keycloak
 
 def validate_password_strength(value):
     if not re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', value):
@@ -15,64 +17,89 @@ def validate_password_strength(value):
         )
     return value
 
-class CustomTokenObtainPairSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+class KeycloakLoginSerializer(serializers.Serializer):
+    email = serializers.CharField()
     password = serializers.CharField(write_only=True)
-
-    @classmethod
-    def get_token(cls, user):
-        token = RefreshToken.for_user(user)
-
-        # Add custom claims from the User model
-        token['email'] = getattr(user, 'email', '')
-        token['first_name'] = getattr(user, 'first_name', '')
-        token['last_name'] = getattr(user, 'last_name', '')
-        
-        if getattr(user, 'organization_id', None):
-            token['organization_id'] = user.organization.id
-            token['organization_name'] = user.organization.name
-
-        return token
 
     def validate(self, attrs):
         email = attrs.get('email')
         password = attrs.get('password')
 
+        # Authenticate with Keycloak
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError({"detail": "No active account found with the given email."})
-
-        if getattr(user, 'approval_status', '') == 'pending':
-            raise serializers.ValidationError({"detail": "Your account is still pending approval from the administrator."})
-            
-        if getattr(user, 'approval_status', '') == 'rejected':
-            raise serializers.ValidationError({"detail": "Your account request was rejected."})
-
-        if not user.is_active:
-            raise serializers.ValidationError({"detail": "This account is inactive."})
-
-        if not check_password(password, user.password_hash):
-            raise serializers.ValidationError({"detail": "Incorrect password."})
-
-        self.user = user
-
-        if user.is_logged_in:
-            if user.email != getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com'):
-                raise ValidationError({"error": "User already logged in"})
-
-        user.is_logged_in = True
-        user.save()
-
-        # Rename keys and add message
-        refresh = self.get_token(user)
-        response_data = {
-            "message": "logged in success fully",
-            "access_token": str(refresh.access_token),
-            "refresh_token": str(refresh)
-        }
+            token_data = authenticate_with_keycloak(email, password)
+        except Exception as e:
+            raise serializers.ValidationError({"detail": f"Keycloak authentication failed: {str(e)}"})
         
-        return response_data
+        if not token_data:
+            raise serializers.ValidationError({"detail": "Invalid credentials or Keycloak authentication failed."})
+
+        # 2. Synchronize user with local DB and handle "already logged in" check
+        try:
+            from .keycloak_auth import keycloak_openid
+            user_info = keycloak_openid.userinfo(token_data['access_token'])
+            
+            user = User.objects.filter(email=email).first()
+            if user and user.is_logged_in:
+                raise serializers.ValidationError({"detail": "User is already logged in."})
+            
+            if not user:
+                user = User.objects.create(
+                    email=email,
+                    first_name=user_info.get('given_name', ''),
+                    last_name=user_info.get('family_name', ''),
+                    is_active=True,
+                    is_verified=True,
+                    approval_status='approved'
+                )
+            
+            # Set logged in flag
+            user.is_logged_in = True
+            user.save()
+
+
+
+            # Sync Organization (from Keycloak Groups)
+            groups = user_info.get('groups', [])
+            for group in groups:
+                if group.startswith('Org:'):
+                    subdomain = group.split(':')[1]
+                    try:
+                        org = Organization.objects.get(subdomain=subdomain)
+                        user.organization = org
+                        user.save()
+                        break
+                    except Organization.DoesNotExist:
+                        pass
+
+            # Sync Roles (from Keycloak Realm Roles)
+            keycloak_roles = user_info.get('realm_access', {}).get('roles', [])
+            target_role_names = [choice[0] for choice in Role.ROLE_CHOICES]
+            for role_name in target_role_names:
+                if role_name in keycloak_roles:
+                    # If super_admin, set Django flags
+                    if role_name == 'super_admin':
+                        user.is_superuser = True
+                        user.is_staff = True
+                        user.save()
+                    
+                    role_obj, _ = Role.objects.get_or_create(
+                        name=role_name,
+                        organization=user.organization
+                    )
+                    UserRole.objects.get_or_create(user=user, role=role_obj)
+        except serializers.ValidationError:
+            raise
+        except Exception as e:
+            raise serializers.ValidationError({"detail": f"User synchronization failed: {str(e)}"})
+
+        return {
+            "message": "logged in successfully via Keycloak",
+            "access_token": token_data.get('access_token'),
+            "refresh_token": token_data.get('refresh_token'),
+            "expires_in": token_data.get('expires_in'),
+            "token_type": token_data.get('token_type'),
+        }
 
 class UnifiedLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -80,6 +107,7 @@ class UnifiedLoginSerializer(serializers.Serializer):
 
 class LogoutSerializer(serializers.Serializer):
     refresh_token = serializers.CharField()
+    access_token = serializers.CharField(required=False)
 
 class OrganizationSignupSerializer(serializers.Serializer):
     admin_email = serializers.EmailField()

@@ -21,7 +21,7 @@ class User(BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    password_hash = models.TextField()
+    password_hash = models.TextField(null=True, blank=True)
 
     # Overriding BaseModel field to keep user inactive until approved
     is_active = models.BooleanField(default=False) 
@@ -53,7 +53,7 @@ class User(BaseModel):
         """
         Checks if the user has an administrative role within their organization.
         """
-        # User defined roles in admin.access.models.role
-        admin_roles = ['organization_admin', 'admin', 'super_admin', 'staff']
+        from .role import Role
+        admin_roles = [Role.ROLE_CHOICES[0][0], Role.ROLE_CHOICES[1][0]] # super_admin, organization_admin
         return self.user_roles.filter(role__name__in=admin_roles).exists() or self.is_superuser
 

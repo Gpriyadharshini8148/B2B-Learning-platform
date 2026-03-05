@@ -12,7 +12,7 @@ class StudentEnrollmentSerializer(serializers.ModelSerializer):
         model = Enrollment
         fields = ['id', 'course', 'course_title', 'instructor_name', 'thumbnail', 'progress', 'rating', 'status']
 
-    def get_progress(self, obj):
+    def get_progress(self, obj) -> float:
         if hasattr(obj, 'progress'):
             return obj.progress.progress_percentage
         return 0.0

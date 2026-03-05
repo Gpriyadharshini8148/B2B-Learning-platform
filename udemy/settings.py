@@ -92,11 +92,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Udemy',
-        'USER': 'postgres',
-        'PASSWORD': '1234',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'Udemy'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', '1234'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -148,9 +148,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'admin.access.authentication.authentication.CustomJWTAuthentication',
-        'admin.access.authentication.authentication.CustomSessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        'admin.access.authentication.keycloak_auth.KeycloakAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -165,6 +164,7 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API for Managing Organizations, Courses, Users, and Multi-tenancy.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 SIMPLE_JWT = {

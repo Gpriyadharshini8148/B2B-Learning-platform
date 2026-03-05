@@ -5,12 +5,16 @@ from django.db.models import Avg, Count
 from admin.access.permissions.tenant_permissions import IsOrganizationAdmin
 from admin.access.models.course_progress import CourseProgress
 
+from drf_spectacular.utils import extend_schema
+from ..serializers.dashboard_serializers import OrgInsightsResponseSerializer
+
 class OrgInsightsAPIView(APIView):
     """
     Provides analytics on organization-wide learning progress and popular courses.
     """
     permission_classes = [permissions.IsAuthenticated, IsOrganizationAdmin]
 
+    @extend_schema(responses={200: OrgInsightsResponseSerializer})
     def get(self, request):
         org = request.user.organization
         if not org:

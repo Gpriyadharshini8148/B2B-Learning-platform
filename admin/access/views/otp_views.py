@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema
 from admin.organizations.models.organization import Organization
 from admin.access.models.user import User
 from admin.access.authentication.serializers import VerifyOTPSerializer
+from admin.access.authentication.keycloak_manager import register_user_with_role
 from concurrent.futures import ThreadPoolExecutor
 
 class VerifyOTPView(views.APIView):
@@ -45,16 +46,32 @@ class VerifyOTPView(views.APIView):
                 # Notify Super Admin about the new Organization request
                 self.notify_super_admin(org)
             else:
-                # It's a user signup. Instantly approve them to allow login.
+                # It's a standard user signup. Instantly approve them to allow login.
                 user.approval_status = 'approved'
                 user.is_active = True
                 user.is_verified = True
                 user.save()
 
-            return Response({"message": "otp verification successfully"}, status=status.HTTP_200_OK)
+                # Assign 'organization_user' role in Django DB
+                from admin.access.models.role import Role
+                from admin.access.models.user_role import UserRole
+                role, _ = Role.objects.get_or_create(
+                    name='organization_user',
+                    organization=org,
+                    defaults={'description': 'System role: organization_user'}
+                )
+                UserRole.objects.get_or_create(user=user, role=role)
+
+                # --- Keycloak Activation ---
+                # The user was provisioned in Keycloak (disabled) during signup to securely store their password.
+                # Now that they have verified their OTP, we enable the account so they can login.
+                from admin.access.authentication.keycloak_manager import enable_keycloak_user
+                enable_keycloak_user(user.email)
+
+            return Response({"message": "OTP verified successfully. You can now login."}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
-            return Response({"error": "invalid otp"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid OTP or email."}, status=status.HTTP_400_BAD_REQUEST)
 
     def notify_super_admin(self, org):
         super_admin_email = settings.EMAIL_HOST_USER
