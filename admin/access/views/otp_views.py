@@ -16,7 +16,7 @@ class VerifyOTPView(views.APIView):
     """
     permission_classes = [permissions.AllowAny]
 
-    @extend_schema(request=VerifyOTPSerializer)
+    @extend_schema(request=VerifyOTPSerializer, responses={200: dict, 400: dict})
     def post(self, request):
         email = request.data.get('email')
         otp = request.data.get('otp')
@@ -62,7 +62,6 @@ class VerifyOTPView(views.APIView):
                 )
                 UserRole.objects.get_or_create(user=user, role=role)
 
-                # --- Keycloak Activation ---
                 # The user was provisioned in Keycloak (disabled) during signup to securely store their password.
                 # Now that they have verified their OTP, we enable the account so they can login.
                 from admin.access.authentication.keycloak_manager import enable_keycloak_user

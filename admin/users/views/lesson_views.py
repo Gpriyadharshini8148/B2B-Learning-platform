@@ -3,7 +3,7 @@ from admin.access.models import Lesson
 from admin.users.serializers.lesson_serializer import LessonDetailSerializer
 
 class UserLessonViewSet(viewsets.ReadOnlyModelViewSet):
-    """Learner‑side Read-Only view for Lesson."""
+    """Learnerside Read-Only view for Lesson."""
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LessonDetailSerializer
 

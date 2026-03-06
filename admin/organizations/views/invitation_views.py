@@ -30,7 +30,7 @@ class OrgInviteNewUserView(views.APIView):
 
     @extend_schema(
         request=InviteUserSerializer,
-        responses={200: serializers.DictField()}
+        responses={200: dict}
     )
     def post(self, request):
         admin_user = request.user

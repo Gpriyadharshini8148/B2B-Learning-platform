@@ -10,6 +10,7 @@ from .views.notification_api import StudentNotificationViewSet
 from .views.progress_api import StudentProgressAPIView
 from .views.category_api import StudentCategoryViewSet
 from .views.quiz_api import StudentQuizAttemptViewSet
+from .views.certificate_api import StudentCertificateViewSet
 
 # ── Fully nested views ───────────────────────────────────────────────────────
 from .views.nested_course_api import (
@@ -34,14 +35,17 @@ from .views.nested_course_api import (
     NestedOptionDetailAPIView,
 )
 
-# ── Router (non-nested endpoints) ───────────────────────────────────────────
+# Router (non-nested endpoints) 
 router = DefaultRouter()
 router.register('enrollments',   StudentEnrollmentViewSet,  basename='user-enrollments')
 router.register('notifications', StudentNotificationViewSet, basename='user-notifications')
 router.register('categories',    StudentCategoryViewSet,     basename='user-categories')
 router.register('quiz-attempts', StudentQuizAttemptViewSet,  basename='user-quiz-attempts')
+router.register('certificates',  StudentCertificateViewSet,  basename='user-certificates')
 
+from drf_spectacular.utils import extend_schema
 
+@extend_schema(responses={200: dict})
 @api_view(['GET'])
 def users_root(request):
     base = request.build_absolute_uri('/api/users/')
@@ -55,6 +59,7 @@ def users_root(request):
             'courses':       base + 'courses/',
             'categories':    base + 'categories/',
             'progress':      base + 'progress/',
+            'certificates':  base + 'certificates/',
         },
         'nested_hierarchy': {
             'courses':       'courses/',

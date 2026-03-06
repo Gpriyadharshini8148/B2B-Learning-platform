@@ -8,6 +8,7 @@ from .models.enrollment import Enrollment
 from .models.course_progress import CourseProgress
 from .models.lesson_progress import LessonProgress
 from .models.lesson import Lesson
+from .models.certificate import Certificate
 from concurrent.futures import ThreadPoolExecutor
 
 @receiver(post_save, sender=User)
@@ -133,7 +134,26 @@ def update_course_progress(sender, instance, **kwargs):
         
         if progress_percentage >= 100:
             progress.completed_at = timezone.now()
+            
+            # Auto-generate certificate
+            Certificate.objects.get_or_create(
+                enrollment=enrollment,
+                defaults={
+                    'certificate_url': f"https://dummy-certificates.com/{enrollment.id}"
+                }
+            )
+            
+            # Mark enrollment as completed
+            if enrollment.status != 'completed':
+                enrollment.status = 'completed'
+                enrollment.save(update_fields=['status'])
         else:
             progress.completed_at = None
+            
+            # Clean up certificate if progress drops below 100
+            Certificate.objects.filter(enrollment=enrollment).delete()
+            if enrollment.status == 'completed':
+                enrollment.status = 'active'
+                enrollment.save(update_fields=['status'])
             
         progress.save()

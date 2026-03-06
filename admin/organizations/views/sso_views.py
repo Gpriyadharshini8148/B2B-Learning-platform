@@ -6,6 +6,7 @@ from admin.access.permissions.tenant_permissions import TenantSafeViewSetMixin, 
 class SSOViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
     serializer_class = OrganizationSSOSerializer
     permission_classes = [IsOrganizationAdmin]
+    queryset = OrganizationSSO.objects.none()
 
     def get_queryset(self):
         return OrganizationSSO.objects.filter(

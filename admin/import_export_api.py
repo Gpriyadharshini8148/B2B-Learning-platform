@@ -1,5 +1,5 @@
 import logging
-from rest_framework import views, status, permissions
+from rest_framework import views, status, permissions, serializers
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from django.http import HttpResponse
@@ -7,6 +7,7 @@ from django.conf import settings
 from tablib import Dataset
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
+from drf_spectacular.utils import extend_schema
 
 # Models
 from admin.organizations.models.organization import Organization
@@ -192,7 +193,9 @@ def enforce_import_data_rules(user, model_name, dataset):
 
 class GenericExportAPIView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = serializers.Serializer
     
+    @extend_schema(responses={200: bytes, 404: dict, 403: dict})
     def get(self, request, model_name):
         # Normalizing model name (e.g. User -> users)
         lookup_name = model_name.lower().strip()
@@ -233,7 +236,9 @@ class GenericExportAPIView(views.APIView):
 class GenericImportAPIView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser]
+    serializer_class = serializers.Serializer
     
+    @extend_schema(responses={200: dict, 400: dict, 404: dict, 403: dict})
     def post(self, request, model_name):
         lookup_name = model_name.lower().strip()
         if lookup_name not in MODEL_REGISTRY:

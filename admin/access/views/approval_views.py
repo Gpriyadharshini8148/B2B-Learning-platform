@@ -1,18 +1,23 @@
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
 from admin.organizations.models.organization import Organization
 from admin.access.models.user import User
 from admin.access.models.role import Role
 from admin.access.models.user_role import UserRole
 from admin.access.authentication.keycloak_manager import register_user_with_role
+from django.core import signing
+
+from admin.access.authentication.keycloak_manager import create_organization_group, setup_base_roles
+from django.contrib.auth.hashers import make_password
 
 class OrgApprovalView(views.APIView):
-    permission_classes = [permissions.AllowAny] # Links are public
+    permission_classes = [permissions.AllowAny] 
 
+    @extend_schema(responses={200: dict, 400: dict})
     def get(self, request, token, action):
-        from django.core import signing
-        from admin.access.authentication.keycloak_manager import create_organization_group, setup_base_roles
-        from django.contrib.auth.hashers import make_password
+
+        
 
         try:
             # Token expires after 7 days
@@ -80,6 +85,7 @@ class OrgApprovalView(views.APIView):
 class UserApprovalView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(responses={200: dict, 400: dict, 404: dict})
     def get(self, request, token, action):
         try:
             user = User.objects.get(approval_token=token)

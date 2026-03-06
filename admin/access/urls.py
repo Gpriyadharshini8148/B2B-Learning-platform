@@ -3,11 +3,13 @@ from django.conf import settings
 from rest_framework.routers import DefaultRouter
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
 from .views.user_views import UserViewSet
 from .views.role_views import RoleViewSet
 from .views.permission_views import PermissionViewSet
 from .views.audit_views import AuditViewSet
 from .authentication.views import KeycloakTokenObtainPairView
+from .authentication.refresh_views import KeycloakTokenRefreshView
 from .views.signup_views import OrganizationSignupView, UserSignupView
 from .views.otp_views import VerifyOTPView
 from .views.logout_views import LogoutView
@@ -22,8 +24,10 @@ router.register(r'permissions', PermissionViewSet, basename='permission')
 router.register(r'audit-logs', AuditViewSet, basename='auditlog')
 router.register(r'images', ImageViewSet, basename='image')
 
+@extend_schema(responses={200: dict})
 @api_view(['GET'])
 def access_root(request):
+
     """
     Overview of Authentication and Access endpoints.
     """
@@ -56,6 +60,7 @@ urlpatterns = [
     # Auth endpoints
     path('auth/login/', KeycloakTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/keycloak/login/', KeycloakTokenObtainPairView.as_view(), name='keycloak_login'),
+    path('auth/refresh/', KeycloakTokenRefreshView.as_view(), name='token_refresh'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     
     # Dashboard endpoint

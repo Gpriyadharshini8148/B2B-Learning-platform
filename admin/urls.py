@@ -9,7 +9,7 @@ from admin.organizations.views import (
     OrgCourseViewSet, OrgCategoryViewSet, OrgLearningPathViewSet, 
     OrgLessonViewSet, OrgSectionViewSet, OrgSkillViewSet, OrgVideoViewSet
 )
-
+from drf_spectacular.utils import extend_schema
 course_router = DefaultRouter()
 course_router.register('courses', OrgCourseViewSet, basename='courses')
 course_router.register('categories', OrgCategoryViewSet, basename='categories')
@@ -19,6 +19,9 @@ course_router.register('sections', OrgSectionViewSet, basename='sections')
 course_router.register('skills', OrgSkillViewSet, basename='skills')
 course_router.register('videos', OrgVideoViewSet, basename='videos')
 
+
+
+@extend_schema(responses={200: dict})
 @api_view(['GET'])
 def admin_api_root(request, format=None):
     """

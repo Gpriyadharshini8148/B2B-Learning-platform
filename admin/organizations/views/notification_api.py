@@ -12,6 +12,7 @@ class OrgNotificationViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
     """
     serializer_class = NotificationSerializer
     permission_classes = [IsOrganizationAdmin]
+    queryset = Notification.objects.none()
 
     def get_queryset(self):
         # Already filtered by TenantSafeViewSetMixin to their organization

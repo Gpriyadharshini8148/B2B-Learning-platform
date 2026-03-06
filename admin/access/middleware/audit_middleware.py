@@ -16,43 +16,44 @@ class AuditLogMiddleware(MiddlewareMixin):
         if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
             user = getattr(request, 'user', None)
             
-            # Ensure the user is authenticated 
-            if user and user.is_authenticated:
-                
-                # SuperAdmins might not have organizations explicitly set
-                org = getattr(user, 'organization', None)
-                
-                # Basic Entity ID extraction from URL paths
-                path_parts = [p for p in request.path.split('/') if p]
-                entity_id = 0
-                for part in reversed(path_parts):
-                    if part.isdigit():
-                        entity_id = int(part)
-                        break
-                        
-                # Determine entity type from URL
-                entity_type = "API Request"
-                if len(path_parts) >= 2:
-                    # Generic heuristic (e.g., api/users/ -> Users)
-                    base_resource = path_parts[-2] if path_parts[-1].isdigit() else path_parts[-1]
-                    entity_type = base_resource.capitalize().replace('-', ' ')
+            # If user is anonymous or not authenticated, allow logging but set user to None
+            if not user or not user.is_authenticated:
+                user = None
+            
+            # Only set org if there's an authenticated user
+            org = getattr(user, 'organization', None) if user else None
+            
+            # Basic Entity ID extraction from URL paths
+            path_parts = [p for p in request.path.split('/') if p]
+            entity_id = 0
+            for part in reversed(path_parts):
+                if part.isdigit():
+                    entity_id = int(part)
+                    break
+                    
+            # Determine entity type from URL
+            entity_type = "API Request"
+            if len(path_parts) >= 2:
+                # Generic heuristic (e.g., api/users/ -> Users)
+                base_resource = path_parts[-2] if path_parts[-1].isdigit() else path_parts[-1]
+                entity_type = base_resource.capitalize().replace('-', ' ')
 
-                metadata = {
-                    "method": request.method,
-                    "path": request.path,
-                    "status_code": response.status_code,
-                }
+            metadata = {
+                "method": request.method,
+                "path": request.path,
+                "status_code": response.status_code,
+            }
 
-                try:
-                    AuditLog.objects.create(
-                        organization=org,
-                        user=user,
-                        action=request.method,
-                        entity_type=entity_type,
-                        entity_id=entity_id,
-                        metadata=json.dumps(metadata)
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to create audit log for {user} on {request.path}: {e}")
+            try:
+                AuditLog.objects.create(
+                    organization=org,
+                    user=user,
+                    action=request.method,
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    metadata=json.dumps(metadata)
+                )
+            except Exception as e:
+                logger.error(f"Failed to create audit log for {user} on {request.path}: {e}")
 
         return response

@@ -23,7 +23,7 @@ class OrganizationSignupView(views.APIView):
     """
     permission_classes = [permissions.AllowAny]
 
-    @extend_schema(request=OrganizationSignupSerializer)
+    @extend_schema(request=OrganizationSignupSerializer, responses={201: dict, 400: dict})
     def post(self, request):
         serializer = OrganizationSignupSerializer(data=request.data)
         if not serializer.is_valid():
@@ -101,7 +101,7 @@ class UserSignupView(views.APIView):
     """
     permission_classes = [permissions.AllowAny]
 
-    @extend_schema(request=UserSignupSerializer)
+    @extend_schema(request=UserSignupSerializer, responses={201: dict, 200: dict, 400: dict})
     def post(self, request):
         serializer = UserSignupSerializer(data=request.data)
         if not serializer.is_valid():

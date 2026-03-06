@@ -1,6 +1,13 @@
-from rest_framework import views, permissions, status
+from rest_framework import views, permissions, status, serializers
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from admin.access.models import Enrollment, CourseProgress
+
+class StudentProgressSerializer(serializers.Serializer):
+    course_id = serializers.IntegerField()
+    course_title = serializers.CharField()
+    progress_percentage = serializers.FloatField()
+    completed_at = serializers.DateTimeField(allow_null=True)
 
 class StudentProgressAPIView(views.APIView):
     """
@@ -9,7 +16,12 @@ class StudentProgressAPIView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        responses={200: StudentProgressSerializer(many=True), 404: dict},
+        operation_id="api_users_progress_list_or_retrieve" 
+    )
     def get(self, request, course_id=None):
+
         user = request.user
         
         if course_id:
@@ -38,7 +50,12 @@ class StudentProgressAPIView(views.APIView):
             })
         return Response(results)
 
-    def post(self, request):
+    @extend_schema(
+        request={'course_id': int, 'progress_percentage': float}, 
+        responses={200: dict, 400: dict, 404: dict},
+        operation_id="api_users_progress_create_or_update"
+    )
+    def post(self, request, course_id=None):
         course_id = request.data.get('course_id')
         progress_val = request.data.get('progress_percentage')
         

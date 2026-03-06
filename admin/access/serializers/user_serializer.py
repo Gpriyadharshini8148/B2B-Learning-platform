@@ -11,11 +11,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'subdomain', 'status', 'email', 'is_active', 'last_login', 'created_at', 'organization', 'first_name', 'last_name')
         read_only_fields = ('created_at', 'last_login')
 
-    def get_name(self, obj):
+    def get_name(self, obj) -> str:
         return f"{obj.first_name} {obj.last_name}".strip()
 
-    def get_subdomain(self, obj):
+    def get_subdomain(self, obj) -> str:
         return obj.organization.subdomain if obj.organization else None
 
-    def get_status(self, obj):
+    def get_status(self, obj) -> str:
         return "active" if obj.is_active else "inactive"

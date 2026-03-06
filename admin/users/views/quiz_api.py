@@ -16,6 +16,7 @@ class StudentQuizViewSet(viewsets.ReadOnlyModelViewSet):
     """
     serializer_class = QuizSerializer
     permission_classes = [permissions.IsAuthenticated]
+    queryset = Quiz.objects.none()
 
     def get_queryset(self):
         user = self.request.user
@@ -29,6 +30,7 @@ class StudentQuizAttemptViewSet(viewsets.ModelViewSet):
     """
     serializer_class = QuizAttemptSerializer
     permission_classes = [permissions.IsAuthenticated]
+    queryset = QuizAttempt.objects.none()
 
     def get_queryset(self):
         return QuizAttempt.objects.filter(user=self.request.user)

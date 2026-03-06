@@ -12,12 +12,15 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/access/:
     get:
       operationId: api_access_retrieve
@@ -26,12 +29,15 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/access/audit-logs/:
     get:
       operationId: api_access_audit_logs_list
@@ -47,9 +53,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -76,9 +80,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -100,9 +102,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -135,9 +135,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -169,9 +167,7 @@ paths:
               $ref: '#/components/schemas/PatchedAuditLogRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -192,16 +188,17 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
   /api/access/auth/keycloak/login/:
     post:
       operationId: api_access_auth_keycloak_login_create
-      description: View to authenticate users via Keycloak.
+      description: |-
+        View to authenticate users via Keycloak.
+        This replaces the standard SimpleJWT login to ensure all authentication
+        goes through Keycloak.
       tags:
       - api
       requestBody:
@@ -229,21 +226,22 @@ paths:
     post:
       operationId: api_access_auth_login_create
       description: |-
-        Extends generic TokenObtainPairView to include custom
-        organization and user details in the JWT token payload.
+        View to authenticate users via Keycloak.
+        This replaces the standard SimpleJWT login to ensure all authentication
+        goes through Keycloak.
       tags:
       - api
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+              $ref: '#/components/schemas/KeycloakLoginRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+              $ref: '#/components/schemas/KeycloakLoginRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+              $ref: '#/components/schemas/KeycloakLoginRequest'
         required: true
       security:
       - {}
@@ -252,14 +250,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CustomTokenObtainPair'
+                $ref: '#/components/schemas/KeycloakLogin'
           description: ''
   /api/access/auth/logout/:
     post:
       operationId: api_access_auth_logout_create
       description: |-
-        Logs out the user by setting is_logged_in to False.
-        Requires an authenticated user.
+        Logs out the user by clearing the is_logged_in flag and
+        invalidating the refresh token in Keycloak.
       tags:
       - api
       requestBody:
@@ -276,45 +274,43 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  message:
-                    type: string
+                additionalProperties: {}
           description: ''
   /api/access/auth/refresh/:
     post:
       operationId: api_access_auth_refresh_create
       description: |-
-        Takes a refresh type JSON web token and returns an access type JSON web
-        token if the refresh token is valid.
+        Takes a refresh token and returns an access token if the refresh token is valid.
+        Uses Keycloak's token endpoint under the hood.
       tags:
       - api
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshTokenRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshTokenRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshTokenRequest'
         required: true
+      security:
+      - {}
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenRefresh'
+                $ref: '#/components/schemas/RefreshToken'
           description: ''
   /api/access/auth/reset-password/:
     post:
@@ -332,36 +328,16 @@ paths:
               type: string
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       - {}
       responses:
         '200':
-          description: No response body
-  /api/access/auth/verify/:
-    post:
-      operationId: api_access_auth_verify_create
-      description: |-
-        Takes a token and indicates if it is valid.  This view provides no
-        information about a token's fitness for a particular use.
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TokenVerifyRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TokenVerifyRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TokenVerifyRequest'
-        required: true
-      responses:
-        '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/access/dashboard/:
     get:
       operationId: api_access_dashboard_retrieve
@@ -372,9 +348,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -398,9 +372,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -424,9 +396,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -449,9 +419,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -482,9 +450,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -514,9 +480,7 @@ paths:
               $ref: '#/components/schemas/PatchedImageRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -538,9 +502,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -559,9 +521,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -588,9 +548,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -613,9 +571,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -649,9 +605,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -684,9 +638,7 @@ paths:
               $ref: '#/components/schemas/PatchedPermissionRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -708,9 +660,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -729,9 +679,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -758,9 +706,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -782,9 +728,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -817,9 +761,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -851,9 +793,7 @@ paths:
               $ref: '#/components/schemas/PatchedRoleRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -874,9 +814,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -902,13 +840,23 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       - {}
       responses:
-        '200':
-          description: No response body
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/access/signup/user/:
     post:
       operationId: api_access_signup_user_create
@@ -931,13 +879,30 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       - {}
       responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/access/user/verify-otp/:
     post:
       operationId: api_access_user_verify_otp_create
@@ -960,13 +925,23 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/access/users/:
     get:
       operationId: api_access_users_list
@@ -985,9 +960,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1017,9 +990,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -1045,9 +1016,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1084,9 +1053,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1122,9 +1089,7 @@ paths:
               $ref: '#/components/schemas/PatchedUserRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1149,9 +1114,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -1173,13 +1136,23 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/bulk-cms/approve/user/{token}/{action}/:
     get:
       operationId: api_bulk_cms_approve_user_retrieve
@@ -1199,13 +1172,30 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/bulk-cms/export/{model_name}/:
     get:
       operationId: api_bulk_cms_export_retrieve
@@ -1219,12 +1209,29 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/bulk-cms/import-export/:
     post:
       operationId: api_bulk_cms_import_export_create
@@ -1232,12 +1239,36 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/bulk-cms/import/{model_name}/:
     post:
       operationId: api_bulk_cms_import_create
@@ -1251,12 +1282,36 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/courses/categories/:
     get:
       operationId: api_courses_categories_list
@@ -1272,9 +1327,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1301,9 +1354,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -1325,9 +1376,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1360,9 +1409,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1394,9 +1441,7 @@ paths:
               $ref: '#/components/schemas/PatchedCategoryRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1417,9 +1462,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -1442,9 +1485,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1475,9 +1516,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -1504,9 +1543,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1544,9 +1581,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1583,9 +1618,7 @@ paths:
               $ref: '#/components/schemas/PatchedCourseRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1611,9 +1644,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -1632,9 +1663,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1661,9 +1690,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -1685,9 +1712,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1720,9 +1745,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1754,9 +1777,7 @@ paths:
               $ref: '#/components/schemas/PatchedLearningPathRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1777,9 +1798,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -1798,9 +1817,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1827,9 +1844,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -1851,9 +1866,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1886,9 +1899,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1920,9 +1931,7 @@ paths:
               $ref: '#/components/schemas/PatchedLessonRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1943,9 +1952,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -1964,9 +1971,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -1993,9 +1998,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -2017,9 +2020,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2052,9 +2053,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2086,9 +2085,7 @@ paths:
               $ref: '#/components/schemas/PatchedSectionRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2109,9 +2106,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -2130,9 +2125,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2159,9 +2152,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -2183,9 +2174,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2218,9 +2207,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2252,9 +2239,7 @@ paths:
               $ref: '#/components/schemas/PatchedSkillRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2275,9 +2260,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -2296,9 +2279,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2322,9 +2303,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -2346,9 +2325,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2378,9 +2355,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2409,9 +2384,7 @@ paths:
               $ref: '#/components/schemas/PatchedVideoRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2432,9 +2405,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -2445,9 +2416,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2478,9 +2447,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       - {}
       responses:
         '201':
@@ -2505,9 +2472,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2530,9 +2495,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2556,9 +2519,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2586,9 +2547,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -2612,9 +2571,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2649,9 +2606,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2685,9 +2640,7 @@ paths:
               $ref: '#/components/schemas/PatchedCourseAssignmentRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2710,9 +2663,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -2731,9 +2682,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2760,9 +2709,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -2784,9 +2731,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2819,9 +2764,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2853,9 +2796,7 @@ paths:
               $ref: '#/components/schemas/PatchedCategoryRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2876,9 +2817,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -2899,9 +2838,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2930,9 +2867,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -2956,9 +2891,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -2993,9 +2926,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3029,9 +2960,7 @@ paths:
               $ref: '#/components/schemas/PatchedCertificateRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3054,9 +2983,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -3077,9 +3004,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3108,9 +3033,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -3134,9 +3057,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3171,9 +3092,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3207,9 +3126,7 @@ paths:
               $ref: '#/components/schemas/PatchedCourseProgressRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3232,9 +3149,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -3258,9 +3173,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3293,9 +3206,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -3322,9 +3233,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3362,9 +3271,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3401,9 +3308,7 @@ paths:
               $ref: '#/components/schemas/PatchedSectionRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3429,9 +3334,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -3460,9 +3363,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3500,9 +3401,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -3540,9 +3439,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3585,9 +3482,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -3624,9 +3519,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3674,9 +3567,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3723,9 +3614,7 @@ paths:
               $ref: '#/components/schemas/PatchedQuizRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3761,9 +3650,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -3802,9 +3689,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3852,9 +3737,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -3896,9 +3779,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -3951,9 +3832,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4005,9 +3884,7 @@ paths:
               $ref: '#/components/schemas/PatchedQuestionRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4048,9 +3925,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -4094,9 +3969,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4149,9 +4022,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -4198,9 +4069,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4258,9 +4127,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4317,9 +4184,7 @@ paths:
               $ref: '#/components/schemas/PatchedOptionRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4365,9 +4230,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -4395,9 +4258,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4440,9 +4301,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4484,9 +4343,7 @@ paths:
               $ref: '#/components/schemas/PatchedLessonRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4517,9 +4374,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -4538,9 +4393,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4564,9 +4417,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -4588,9 +4439,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4620,9 +4469,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4651,9 +4498,7 @@ paths:
               $ref: '#/components/schemas/PatchedVideoRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4674,9 +4519,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -4699,9 +4542,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4732,9 +4573,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -4761,9 +4600,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4801,9 +4638,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4840,9 +4675,7 @@ paths:
               $ref: '#/components/schemas/PatchedCourseRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4868,9 +4701,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -4891,9 +4722,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4922,9 +4751,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -4948,9 +4775,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -4985,9 +4810,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5021,9 +4844,7 @@ paths:
               $ref: '#/components/schemas/PatchedDepartmentRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5046,9 +4867,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -5067,9 +4886,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5096,9 +4913,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -5120,9 +4935,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5155,9 +4968,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5189,9 +5000,7 @@ paths:
               $ref: '#/components/schemas/PatchedOrganizationDomainRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5212,9 +5021,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -5235,9 +5042,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5266,9 +5071,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -5293,9 +5096,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5331,9 +5132,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5368,9 +5167,7 @@ paths:
               $ref: '#/components/schemas/PatchedEnrollmentRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5394,9 +5191,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -5409,9 +5204,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5442,9 +5235,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5452,7 +5243,6 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
-                description: Unspecified response body
           description: ''
   /api/organizations/invite-v2/:
     post:
@@ -5477,9 +5267,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5487,7 +5275,6 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
-                description: Unspecified response body
           description: ''
   /api/organizations/learners-directory/:
     get:
@@ -5504,9 +5291,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5529,9 +5314,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5554,9 +5337,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5583,9 +5364,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -5608,9 +5387,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5637,9 +5414,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -5661,9 +5436,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5696,9 +5469,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5730,9 +5501,7 @@ paths:
               $ref: '#/components/schemas/PatchedLearningPathRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5753,9 +5522,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -5773,9 +5540,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5808,9 +5573,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5842,9 +5605,7 @@ paths:
               $ref: '#/components/schemas/PatchedLearningPathRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5865,9 +5626,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -5888,9 +5647,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5919,9 +5676,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -5945,9 +5700,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -5982,9 +5735,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6018,9 +5769,7 @@ paths:
               $ref: '#/components/schemas/PatchedLessonProgressRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6043,9 +5792,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -6066,9 +5813,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6097,9 +5842,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -6124,9 +5867,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6162,9 +5903,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6199,9 +5938,7 @@ paths:
               $ref: '#/components/schemas/PatchedUserRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6225,9 +5962,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -6258,9 +5993,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6284,9 +6017,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6314,9 +6045,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -6333,15 +6062,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this notification.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6357,7 +6085,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this notification.
         required: true
       tags:
       - api
@@ -6375,9 +6104,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6393,7 +6120,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this notification.
         required: true
       tags:
       - api
@@ -6410,9 +6138,7 @@ paths:
               $ref: '#/components/schemas/PatchedNotificationRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6428,15 +6154,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this notification.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -6448,9 +6173,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6475,9 +6198,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6506,9 +6227,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -6532,9 +6251,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6569,9 +6286,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6605,9 +6320,7 @@ paths:
               $ref: '#/components/schemas/PatchedPaymentRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6630,9 +6343,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -6662,9 +6373,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6680,9 +6389,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6706,9 +6413,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6725,15 +6430,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this invitation.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6759,9 +6463,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6791,9 +6493,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -6819,9 +6519,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6858,9 +6556,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6896,9 +6592,7 @@ paths:
               $ref: '#/components/schemas/PatchedOrganizationRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6923,9 +6617,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -6937,9 +6629,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6966,9 +6656,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -6994,9 +6682,7 @@ paths:
               $ref: '#/components/schemas/PatchedOrganizationRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7021,9 +6707,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7052,9 +6736,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -7078,9 +6760,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7115,9 +6795,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7151,9 +6829,7 @@ paths:
               $ref: '#/components/schemas/PatchedCourseProgressRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7176,9 +6852,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -7197,9 +6871,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7226,9 +6898,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -7250,9 +6920,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7285,9 +6953,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7319,9 +6985,7 @@ paths:
               $ref: '#/components/schemas/PatchedSkillRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7342,9 +7006,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -7363,9 +7025,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7392,9 +7052,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -7410,15 +7068,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this organization sso.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7433,7 +7090,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this organization sso.
         required: true
       tags:
       - api
@@ -7451,9 +7109,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7468,7 +7124,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this organization sso.
         required: true
       tags:
       - api
@@ -7485,9 +7142,7 @@ paths:
               $ref: '#/components/schemas/PatchedOrganizationSSORequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7502,15 +7157,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this organization sso.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -7531,9 +7185,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7562,9 +7214,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -7588,9 +7238,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7625,9 +7273,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7661,9 +7307,7 @@ paths:
               $ref: '#/components/schemas/PatchedSubscriptionRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7686,9 +7330,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -7707,9 +7349,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7736,9 +7376,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -7760,9 +7398,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7795,9 +7431,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7829,9 +7463,7 @@ paths:
               $ref: '#/components/schemas/PatchedUserDepartmentRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7852,9 +7484,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -7874,9 +7504,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7904,9 +7532,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -7930,9 +7556,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -7967,9 +7591,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8003,9 +7625,7 @@ paths:
               $ref: '#/components/schemas/PatchedNotificationRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8028,9 +7648,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -8051,9 +7669,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8082,9 +7698,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -8110,9 +7724,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8148,9 +7760,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8185,9 +7795,7 @@ paths:
               $ref: '#/components/schemas/PatchedManageOrganizationListRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8211,9 +7819,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -8246,9 +7852,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8283,9 +7887,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8300,12 +7902,15 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/categories/:
     get:
       operationId: api_users_categories_list
@@ -8323,9 +7928,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8350,9 +7953,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8360,9 +7961,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/Category'
           description: ''
+  /api/users/certificates/:
+    get:
+      operationId: api_users_certificates_list
+      description: |-
+        API for users (students) to view their own earned certificates.
+        Allows listing all earned certificates and retrieving specific ones.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - User Certificates
+      security:
+      - KeycloakAuthentication: []
+      - SessionAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCertificateList'
+          description: ''
+  /api/users/certificates/{id}/:
+    get:
+      operationId: api_users_certificates_retrieve
+      description: |-
+        API for users (students) to view their own earned certificates.
+        Allows listing all earned certificates and retrieving specific ones.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this certificate.
+        required: true
+      tags:
+      - User Certificates
+      security:
+      - KeycloakAuthentication: []
+      - SessionAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+          description: ''
   /api/users/courses/:
     get:
-      operationId: api_users_courses_retrieve
+      operationId: api_users_courses_list
       description: |-
         GET /api/users/courses/
         List all published courses available to the user's organisation.
@@ -8370,9 +8021,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8382,7 +8031,7 @@ paths:
           description: ''
   /api/users/courses/{course_id}/:
     get:
-      operationId: api_users_courses_retrieve_2
+      operationId: api_users_courses_detail
       description: GET /api/users/courses/<course_id>/
       parameters:
       - in: path
@@ -8394,9 +8043,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8406,7 +8053,7 @@ paths:
           description: ''
   /api/users/courses/{course_id}/sections/:
     get:
-      operationId: api_users_courses_sections_retrieve
+      operationId: api_users_courses_sections_list
       description: GET /api/users/courses/<course_id>/sections/
       parameters:
       - in: path
@@ -8418,9 +8065,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8430,7 +8075,7 @@ paths:
           description: ''
   /api/users/courses/{course_id}/sections/{section_id}/:
     get:
-      operationId: api_users_courses_sections_retrieve_2
+      operationId: api_users_courses_sections_detail
       description: GET /api/users/courses/<course_id>/sections/<section_id>/
       parameters:
       - in: path
@@ -8447,15 +8092,18 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/:
     get:
-      operationId: api_users_courses_sections_lessons_retrieve
+      operationId: api_users_courses_sections_lessons_list
       description: GET /api/users/courses/<course_id>/sections/<section_id>/lessons/
       parameters:
       - in: path
@@ -8472,9 +8120,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8484,7 +8130,7 @@ paths:
           description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/{lesson_id}/:
     get:
-      operationId: api_users_courses_sections_lessons_retrieve_2
+      operationId: api_users_courses_sections_lessons_detail
       description: GET /api/users/courses/<course_id>/sections/<section_id>/lessons/<lesson_id>/
       parameters:
       - in: path
@@ -8506,9 +8152,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8542,9 +8186,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8554,7 +8196,7 @@ paths:
           description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/{lesson_id}/questions/:
     get:
-      operationId: api_users_courses_sections_lessons_questions_retrieve
+      operationId: api_users_courses_sections_lessons_questions_list
       description: |-
         GET /api/users/courses/<course_id>/sections/<section_id>/lessons/<lesson_id>/questions/
         Returns the quiz and all its questions (with options) for a lesson.
@@ -8578,15 +8220,25 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/{lesson_id}/questions/{question_id}/:
     get:
-      operationId: api_users_courses_sections_lessons_questions_retrieve_2
+      operationId: api_users_courses_sections_lessons_questions_detail
       description: GET /api/users/courses/<course_id>/sections/<section_id>/lessons/<lesson_id>/questions/<question_id>/
       parameters:
       - in: path
@@ -8613,15 +8265,25 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/{lesson_id}/questions/{question_id}/options/:
     get:
-      operationId: api_users_courses_sections_lessons_questions_options_retrieve
+      operationId: api_users_courses_sections_lessons_questions_options_list
       description: GET /api/users/courses/<course_id>/sections/<section_id>/lessons/<lesson_id>/questions/<question_id>/options/
       parameters:
       - in: path
@@ -8648,15 +8310,25 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/{lesson_id}/questions/{question_id}/options/{option_id}/:
     get:
-      operationId: api_users_courses_sections_lessons_questions_options_retrieve_2
+      operationId: api_users_courses_sections_lessons_questions_options_detail
       description: GET /api/users/courses/<course_id>/sections/<section_id>/lessons/<lesson_id>/questions/<question_id>/options/<option_id>/
       parameters:
       - in: path
@@ -8688,12 +8360,22 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/{lesson_id}/video/:
     get:
       operationId: api_users_courses_sections_lessons_video_retrieve
@@ -8720,12 +8402,22 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/courses/{course_id}/sections/{section_id}/lessons/{lesson_id}/watch-time/:
     patch:
       operationId: api_users_courses_sections_lessons_watch_time_partial_update
@@ -8750,14 +8442,29 @@ paths:
         required: true
       tags:
       - api
+      requestBody:
+        content:
+          watch_time_seconds:
+            schema:
+              type: integer
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/enrollments/:
     get:
       operationId: api_users_enrollments_list
@@ -8777,9 +8484,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8810,9 +8515,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -8839,9 +8542,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8879,9 +8580,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8918,9 +8617,7 @@ paths:
               $ref: '#/components/schemas/PatchedStudentEnrollmentRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -8946,9 +8643,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -8983,9 +8678,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9005,9 +8698,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9025,12 +8716,14 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
     put:
       operationId: api_users_me_update
       description: |-
@@ -9038,14 +8731,28 @@ paths:
         Load user profile, identify logged-in user.
       tags:
       - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/users/notifications/:
     get:
       operationId: api_users_notifications_list
@@ -9065,9 +8772,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9087,15 +8792,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this user notification.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9115,7 +8819,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this user notification.
         required: true
       tags:
       - api
@@ -9132,9 +8837,7 @@ paths:
               $ref: '#/components/schemas/StudentNotificationRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9165,9 +8868,7 @@ paths:
               $ref: '#/components/schemas/StudentNotificationRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9187,9 +8888,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9207,12 +8906,14 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
     put:
       operationId: api_users_profile_update
       description: |-
@@ -9220,17 +8921,31 @@ paths:
         Load user profile, identify logged-in user.
       tags:
       - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/users/progress/:
     get:
-      operationId: api_users_progress_retrieve
+      operationId: api_users_progress_list_or_retrieve
       description: |-
         GET /api/user/progress/{course_id}
         POST /api/user/progress
@@ -9238,30 +8953,67 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudentProgress'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
     post:
-      operationId: api_users_progress_create
+      operationId: api_users_progress_create_or_update
       description: |-
         GET /api/user/progress/{course_id}
         POST /api/user/progress
       tags:
       - api
+      requestBody:
+        content:
+          course_id:
+            schema:
+              type: integer
+          progress_percentage:
+            schema:
+              type: number
+              format: double
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/progress/{course_id}/:
     get:
-      operationId: api_users_progress_retrieve_2
+      operationId: api_users_progress_list_or_retrieve_2
       description: |-
         GET /api/user/progress/{course_id}
         POST /api/user/progress
@@ -9275,14 +9027,25 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudentProgress'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
     post:
-      operationId: api_users_progress_create_2
+      operationId: api_users_progress_create_or_update_2
       description: |-
         GET /api/user/progress/{course_id}
         POST /api/user/progress
@@ -9294,14 +9057,40 @@ paths:
         required: true
       tags:
       - api
+      requestBody:
+        content:
+          course_id:
+            schema:
+              type: integer
+          progress_percentage:
+            schema:
+              type: number
+              format: double
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/users/quiz-attempts/:
     get:
       operationId: api_users_quiz_attempts_list
@@ -9317,9 +9106,7 @@ paths:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9346,9 +9133,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '201':
           content:
@@ -9364,15 +9149,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this quiz attempt.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9387,7 +9171,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this quiz attempt.
         required: true
       tags:
       - api
@@ -9405,9 +9190,7 @@ paths:
         required: true
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9422,7 +9205,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this quiz attempt.
         required: true
       tags:
       - api
@@ -9439,9 +9223,7 @@ paths:
               $ref: '#/components/schemas/PatchedQuizAttemptRequest'
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '200':
           content:
@@ -9456,15 +9238,14 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this quiz attempt.
         required: true
       tags:
       - api
       security:
       - KeycloakAuthentication: []
-      - CustomJWTAuthentication: []
-      - CustomSessionAuthentication: []
-      - basicAuth: []
+      - SessionAuthentication: []
       responses:
         '204':
           description: No response body
@@ -9876,28 +9657,6 @@ components:
       - language
       - level
       - title
-    CustomTokenObtainPair:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-      required:
-      - email
-    CustomTokenObtainPairRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-          minLength: 1
-        password:
-          type: string
-          writeOnly: true
-          minLength: 1
-      required:
-      - email
-      - password
     Department:
       type: object
       properties:
@@ -10178,6 +9937,9 @@ components:
         refresh_token:
           type: string
           minLength: 1
+        access_token:
+          type: string
+          minLength: 1
       required:
       - refresh_token
     ManageOrganizationCreateRequest:
@@ -10193,6 +9955,10 @@ components:
           type: string
           format: email
           minLength: 1
+        password:
+          type: string
+          minLength: 1
+          default: Admin@123
         create_keycloak_realm:
           type: boolean
           default: false
@@ -12478,6 +12244,21 @@ components:
           format: double
       required:
       - title
+    RefreshToken:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      required:
+      - refresh_token
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+      required:
+      - refresh_token
     Role:
       type: object
       properties:
@@ -12717,6 +12498,25 @@ components:
           type: string
           format: date-time
           nullable: true
+    StudentProgress:
+      type: object
+      properties:
+        course_id:
+          type: integer
+        course_title:
+          type: string
+        progress_percentage:
+          type: number
+          format: double
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - completed_at
+      - course_id
+      - course_title
+      - progress_percentage
     Subscription:
       type: object
       properties:
@@ -12752,32 +12552,6 @@ components:
       required:
       - organization
       - plan_name
-    TokenRefresh:
-      type: object
-      properties:
-        access:
-          type: string
-          readOnly: true
-      required:
-      - access
-    TokenRefreshRequest:
-      type: object
-      properties:
-        refresh:
-          type: string
-          writeOnly: true
-          minLength: 1
-      required:
-      - refresh
-    TokenVerifyRequest:
-      type: object
-      properties:
-        token:
-          type: string
-          writeOnly: true
-          minLength: 1
-      required:
-      - token
     TypeEnum:
       enum:
       - system
@@ -12970,18 +12744,11 @@ components:
       - title
       - video_file
   securitySchemes:
-    CustomJWTAuthentication:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-    CustomSessionAuthentication:
-      type: apiKey
-      in: cookie
-      name: sessionid
     KeycloakAuthentication:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    basicAuth:
-      type: http
-      scheme: basic
+    SessionAuthentication:
+      type: apiKey
+      in: cookie
+      name: sessionid

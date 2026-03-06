@@ -87,6 +87,11 @@ class TenantSafeViewSetMixin:
     """
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Bypass for drf-spectacular schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return queryset.none()
+            
         user = self.request.user
 
         super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')

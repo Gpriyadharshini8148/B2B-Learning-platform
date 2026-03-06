@@ -5,6 +5,19 @@ from .models.role import Role
 from .models.user_role import UserRole
 from .models.course import Course
 from .models.enrollment import Enrollment
+from .models.audit_log import AuditLog
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ('id', 'get_user_email', 'action', 'entity_type', 'entity_id', 'created_at')
+    list_filter = ('action', 'entity_type', 'created_at')
+    search_fields = ('user__email', 'entity_type')
+    ordering = ('-created_at',)
+    
+    def get_user_email(self, obj):
+        return obj.user.email if obj.user else 'Anonymous / System'
+    get_user_email.short_description = 'User'
+
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):

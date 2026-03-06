@@ -8,6 +8,7 @@ from admin.access.permissions.tenant_permissions import TenantSafeViewSetMixin, 
 class OrgLessonViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
     serializer_class = LessonSerializer
     permission_classes = [IsOrgAdminOrReadOnly]
+    ordering = ["order_number", "id"]
 
     def get_queryset(self):
         user = self.request.user

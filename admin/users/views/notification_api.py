@@ -14,6 +14,7 @@ class StudentNotificationViewSet(viewsets.ReadOnlyModelViewSet):
     """
     serializer_class = StudentNotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    queryset = UserNotification.objects.none()
 
     def get_queryset(self):
         return UserNotification.objects.filter(user=self.request.user).order_by('-created_at')

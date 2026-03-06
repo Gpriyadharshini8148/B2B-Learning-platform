@@ -10,7 +10,7 @@ class LogoutView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    @extend_schema(request=LogoutSerializer)
+    @extend_schema(request=LogoutSerializer, responses={200: dict})
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)
         if serializer.is_valid():

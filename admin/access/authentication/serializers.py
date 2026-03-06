@@ -40,8 +40,17 @@ class KeycloakLoginSerializer(serializers.Serializer):
             user_info = keycloak_openid.userinfo(token_data['access_token'])
             
             user = User.objects.filter(email=email).first()
-            if user and user.is_logged_in:
-                raise serializers.ValidationError({"detail": "User is already logged in."})
+            
+            if user:
+                # Check for existing session
+                if user.is_logged_in:
+                    # Check if the user is a super admin
+                    # (Either via Django flag or Keycloak role info)
+                    keycloak_roles = user_info.get('realm_access', {}).get('roles', [])
+                    is_super = user.is_superuser or 'super_admin' in keycloak_roles
+                    
+                    if not is_super:
+                        raise serializers.ValidationError({"detail": "User is already logged in. Please log out first."})
             
             if not user:
                 user = User.objects.create(
@@ -53,7 +62,7 @@ class KeycloakLoginSerializer(serializers.Serializer):
                     approval_status='approved'
                 )
             
-            # Set logged in flag
+            # Update/Set logged in flag
             user.is_logged_in = True
             user.save()
 

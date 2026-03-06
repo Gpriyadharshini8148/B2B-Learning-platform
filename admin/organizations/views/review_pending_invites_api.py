@@ -14,6 +14,7 @@ class OrgReviewPendingInvitesViewSet(viewsets.ReadOnlyModelViewSet):
     """
     serializer_class = PendingInviteSerializer
     permission_classes = [permissions.IsAuthenticated, IsOrganizationAdmin]
+    queryset = Invitation.objects.none()
 
     def get_queryset(self):
         return Invitation.objects.filter(

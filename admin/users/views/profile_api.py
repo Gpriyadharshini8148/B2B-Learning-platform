@@ -8,6 +8,7 @@ class UserProfileAPIView(views.APIView):
     Load user profile, identify logged-in user.
     """
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSerializer
 
     def get(self, request):
         serializer = UserSerializer(request.user)
