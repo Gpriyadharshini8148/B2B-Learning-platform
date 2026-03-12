@@ -6,7 +6,6 @@ class RefreshTokenSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         refresh_token = attrs.get('refresh_token', '').strip()
-        
         # Handle case where user accidentally includes "Bearer " prefix in the JSON body
         if refresh_token.lower().startswith('bearer '):
             refresh_token = refresh_token[7:].strip()

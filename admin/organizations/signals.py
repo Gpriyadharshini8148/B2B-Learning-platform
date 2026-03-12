@@ -41,32 +41,41 @@ def send_organization_approval_email(sender, instance, created, **kwargs):
         except Exception as e:
             logger.error(f"Failed to send organization approval email: {e}")
 
+from django.core import signing
+
 @receiver(post_save, sender=Invitation)
 def send_invitation_email(sender, instance, created, **kwargs):
     """
-    Sends an invitation email when a new Invitation is created.
+    Sends a secure invitation email when a new Invitation is created.
     """
     if created:
-        # Base URL for invitation acceptance
-        invite_url = f"http://localhost:8000/api/organizations/accept-invite/?token={instance.token}"
-        
-        subject = f"Invitation to join {instance.organization.name}"
+        # Build the same token logic that was in the view
+        token_data = {
+            'invitation_id': str(instance.token),
+            'email': instance.email,
+            'org_id': instance.organization.pk,
+            'role': instance.role,
+        }
+        signed_token = signing.dumps(token_data)
+
+        # Assuming the request host is needed, we usually handle this by using 
+        # a settings variable or passing context. For simplicity in a local dev,
+        # we'll use localhost:8000.
+        base_url = "http://localhost:8000"
+        accept_url = f"{base_url}/api/organizations/accept-invite/?token={signed_token}"
+
+        subject = f"You're invited to join {instance.organization.name}!"
         message = (
-            f"You have been invited to join {instance.organization.name} as a {instance.role.capitalize()}.\n\n"
-            f"Please click the link below to accept the invitation and set up your account:\n"
-            f"Accept Invitation: {invite_url}\n\n"
-            "This link will expire in 7 days."
+            f"Hello,\n\n"
+            f"You have been invited to join "
+            f"'{instance.organization.name}' as a '{instance.role}'.\n\n"
+            f"Please click the link below to set up your account:\n"
+            f"{accept_url}\n\n"
+            f"This link will expire in 7 days.\n"
         )
-        
+
         try:
             executor = ThreadPoolExecutor(max_workers=1)
-            
-            def send_background_email(subj, msg, from_email, recipient):
-                try:
-                    send_mail(subj, msg, from_email, [recipient], fail_silently=False)
-                except Exception as e:
-                    logger.error(f"Failed to send invitation email: {e}")
-            
-            executor.submit(send_background_email, subject, message, settings.DEFAULT_FROM_EMAIL, instance.email)
+            executor.submit(send_mail, subject, message, settings.DEFAULT_FROM_EMAIL, [instance.email], fail_silently=False)
         except Exception as e:
             logger.error(f"Failed to initiate background email for invitation: {e}")

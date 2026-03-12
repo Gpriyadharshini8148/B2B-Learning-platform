@@ -11,6 +11,7 @@ from .views.progress_api import StudentProgressAPIView
 from .views.category_api import StudentCategoryViewSet
 from .views.quiz_api import StudentQuizAttemptViewSet
 from .views.certificate_api import StudentCertificateViewSet
+from .views.wishlist_api import WishlistToggleAPIView, WishlistListAPIView
 
 # ── Fully nested views ───────────────────────────────────────────────────────
 from .views.nested_course_api import (
@@ -156,6 +157,9 @@ urlpatterns = [
     path(_CSLQO + '<int:option_id>/',
          NestedOptionDetailAPIView.as_view(),
          name='user-option-detail'),
+
+    path('wishlist/', WishlistListAPIView.as_view(), name='user-wishlist-list'),
+    path('wishlist/toggle/', WishlistToggleAPIView.as_view(), name='user-wishlist-toggle'),
 
     # ── ViewSet routes (enrollments, notifications, categories, quiz attempts)
     path('', include(router.urls)),

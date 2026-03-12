@@ -102,8 +102,6 @@ class NotificationResource(resources.ModelResource):
         model = Notification
         fields = ('id', 'title', 'message', 'type', 'organization')
 
-# --- Registry ---
-
 # Mapping display names to registry keys (lowercase, no spaces/special chars)
 MODEL_REGISTRY = {
     'organization': {'model': Organization, 'resource': OrganizationResource},

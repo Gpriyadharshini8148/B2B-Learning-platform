@@ -45,8 +45,10 @@ class KeycloakLoginSerializer(serializers.Serializer):
                 # Check for existing session
                 if user.is_logged_in:
                     # Check if the user is a super admin
-                    # (Either via Django flag or Keycloak role info)
-                    keycloak_roles = user_info.get('realm_access', {}).get('roles', [])
+                    # Realm roles are usually in the token's 'realm_access', but userinfo might not include them. 
+                    token_info = keycloak_openid.decode_token(token_data['access_token'])
+                    keycloak_roles = token_info.get('realm_access', {}).get('roles', [])
+                    
                     is_super = user.is_superuser or 'super_admin' in keycloak_roles
                     
                     if not is_super:

@@ -1,7 +1,5 @@
 import logging
 from rest_framework import views, status, permissions
-
-logger = logging.getLogger(__name__)
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
@@ -10,12 +8,13 @@ from drf_spectacular.utils import extend_schema
 from admin.organizations.models.organization import Organization
 from admin.access.models.user import User
 from admin.access.authentication.serializers import OrganizationSignupSerializer, UserSignupSerializer
-from admin.access.authentication.keycloak_manager import create_organization_group, register_user_with_role
+from admin.access.signals import organization_provisioned, organization_requested
+from admin.access.authentication.keycloak_manager import create_organization_group, register_user_with_role, setup_base_roles
 from django.utils import timezone
 import datetime
 import string
 import random
-
+logger = logging.getLogger(__name__)
 class OrganizationSignupView(views.APIView):
     """
     Public API for Organizations to register.
@@ -30,7 +29,7 @@ class OrganizationSignupView(views.APIView):
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
             
         email = request.data.get('admin_email')
-        password = request.data.get('password') # Note: Assuming password must still be passed 
+        password = request.data.get('password') #Assuming password must still be passed 
         
         # If no password provided, generate a secure temporary one
         if not password:
@@ -52,41 +51,15 @@ class OrganizationSignupView(views.APIView):
                 return Response({"error": "This organization is already registered and pending approval by the Super Admin."}, status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": "This email is already registered."}, status=status.HTTP_400_BAD_REQUEST)
 
-        from django.core import signing
-        from concurrent.futures import ThreadPoolExecutor
-
-        # Package the organization data securely (no DB insert yet)
-        data = {
-            'name': org_name,
-            'subdomain': subdomain,
-            'email': email,
-            'password': password
-        }
-        token = signing.dumps(data)
-
-        # Send approval email directly from this view since we aren't using signals
-        subject = f"NEW REGISTRATION REQUEST: {org_name}"
-        accept_link = f"http://localhost:8000/api/bulk-cms/approve/org/{token}/accept/"
-        reject_link = f"http://localhost:8000/api/bulk-cms/approve/org/{token}/reject/"
-
-        message = (
-            f"Hello Super Admin,\n\n"
-            f"A new organization has requested to join:\n\n"
-            f"Organization: {org_name}\n"
-            f"Subdomain: {subdomain}\n"
-            f"Admin Email: {email}\n\n"
-            f"Click here to Accept and Provision: {accept_link}\n"
-            f"Click here to Reject: {reject_link}\n"
+        # Trigger signal to send email to Super Admin
+        organization_requested.send(
+            sender=self.__class__,
+            request=request,
+            email=email,
+            name=org_name,
+            subdomain=subdomain,
+            password=password
         )
-
-        def send_background_email(subj, msg, from_email, recipient):
-            try:
-                send_mail(subj, msg, from_email, [recipient], fail_silently=False)
-            except Exception as e:
-                print(f"Failed to send email to Super Admin: {e}")
-
-        executor = ThreadPoolExecutor(max_workers=1)
-        executor.submit(send_background_email, subject, message, settings.DEFAULT_FROM_EMAIL, settings.EMAIL_HOST_USER)
 
         return Response({
             "message": "Organization registration request sent successfully! The Super Admin will review and approve your organization within 24 hours. You will receive an email confirmation once approved.",
@@ -192,28 +165,6 @@ class UserSignupView(views.APIView):
         )
         user._is_signup = True
         user.save()
-
-        # 4. Send OTP email
-        from concurrent.futures import ThreadPoolExecutor
-        def _send_otp_email(recipient, otp_code):
-            try:
-                send_mail(
-                    subject="Your OTP code",
-                    message=(
-                        f"Hello,\n\n"
-                        f"Your One-Time Password (OTP) for signup is:\n\n"
-                        f"  {otp_code}\n\n"
-                        f"This OTP is valid for 10 minutes. Do not share it with anyone."
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[recipient],
-                    fail_silently=False,
-                )
-            except Exception as e:
-                print(f"Failed to send OTP email to {recipient}: {e}")
-
-        executor = ThreadPoolExecutor(max_workers=1)
-        executor.submit(_send_otp_email, email, otp)
 
         return Response({
             "message": f"An OTP has been sent to {email}. Please verify to complete signup.",

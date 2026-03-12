@@ -1,8 +1,10 @@
 from rest_framework import viewsets, permissions, status, serializers, pagination
+from concurrent.futures import ThreadPoolExecutor
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth.hashers import make_password
 from django.core.signing import TimestampSigner
+from django.core.mail import send_mail
 from drf_spectacular.utils import extend_schema
 from admin.organizations.serializers.manage_organization_serializer import (
     ManageOrganizationListSerializer, 
@@ -14,6 +16,7 @@ from admin.organizations.models.organization import Organization
 from admin.access.models.user import User as CustomUser
 from admin.access.models.role import Role
 from admin.access.models.user_role import UserRole
+from admin.access.signals import organization_provisioned
 from admin.access.authentication.keycloak_manager import create_organization_group, register_user_with_role, setup_base_roles
 
 
@@ -67,65 +70,20 @@ class ManageOrganizationsViewSet(viewsets.GenericViewSet):
         if CustomUser.objects.filter(email=email).exists():
             return Response({"error": "A user with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create Organization
-        org = Organization.objects.create(
-            name=name,
-            subdomain=subdomain,
-            is_active=True,
-            is_verified=True,
-            approval_status='approved'
-        )
-
-        # Create Org Admin Role if it doesn't exist
-        admin_role, _ = Role.objects.get_or_create(
-            name="organization_admin",
-            organization=org,
-            defaults={"description": "Organization Administrator"}
-        )
-
-        # Create Admin User
-        admin_user = CustomUser.objects.create(
-            email=email,
-            first_name="Admin",
-            last_name=name,
-            organization=org,
-            password_hash=make_password(password),
-            is_active=True,
-            is_verified=True,
-            approval_status='approved'
-        )
-
-        UserRole.objects.create(user=admin_user, role=admin_role)
-
-        # --- Hierarchical Keycloak Integration ---
-        # 1. Ensure base roles exist
-        setup_base_roles()
-
-        # 2. Create the Organization Group
-        group_success, group_msg = create_organization_group(subdomain)
-        
-        # 3. Register User and set password
-        kc_user_success, kc_user_msg = register_user_with_role(
+        # Trigger Signal to send email
+        organization_provisioned.send(
+            sender=self.__class__, 
+            request=request, 
             email=email, 
-            password=password,
-            role_name="organization_admin",
-            organization_subdomain=subdomain,
-            enabled=True
+            name=name, 
+            subdomain=subdomain
         )
-
-        keycloak_msg = ""
-        if group_success and kc_user_success:
-            keycloak_msg = " Keycloak group and admin user successfully provisioned."
-        else:
-            keycloak_msg = f" Note: Keycloak provisioning hit issues: {group_msg if not group_success else kc_user_msg}"
 
         return Response({
-            "message": f"Organization {org.name} created.{keycloak_msg} Admin user is: {email}.",
-            "id": org.id,
-            "name": org.name,
-            "subdomain": org.subdomain,
+            "message": f"Invitation sent! Organization '{name}' will be created in the database once the administrator sets up their account via the email link.",
             "email": email,
-            "status": "active"
+            "subdomain": subdomain,
+            "status": "pending_setup"
         }, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, pk=None):

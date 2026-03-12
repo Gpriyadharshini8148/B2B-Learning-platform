@@ -86,14 +86,7 @@ class OrgInviteNewUserView(views.APIView):
             f"If you did not expect this invitation, you can ignore this email."
         )
 
-        def send_background_email(subj, msg, from_email, recipient):
-            try:
-                send_mail(subj, msg, from_email, [recipient], fail_silently=False)
-            except Exception as e:
-                logger.error(f"Failed to send invitation email to {recipient}: {e}")
-
-        executor = ThreadPoolExecutor(max_workers=1)
-        executor.submit(send_background_email, subject, message, settings.DEFAULT_FROM_EMAIL, email)
+        # Note: The invitation email is now automatically sent by a post_save signal on the Invitation model in admin/organizations/signals.py
 
         return Response({
             "message": f"Invitation sent to {email}.",
@@ -107,6 +100,31 @@ class AcceptInvitationView(views.APIView):
     Provisions the user in both Django and Keycloak.
     """
     permission_classes = [permissions.AllowAny]
+    
+    @extend_schema(responses={200: dict})
+    def get(self, request):
+        """
+        Validates the invitation token and returns account details.
+        """
+        from django.core import signing
+        token = request.query_params.get('token')
+        
+        if not token:
+             return Response({"error": "Token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            data = signing.loads(token, max_age=86400 * 7)
+            return Response({
+                "message": f"Invitation valid for {data.get('email')}.",
+                "organization_id": data.get('org_id'),
+                "role": data.get('role'),
+                "instructions": "Please send a POST request with your 'first_name', 'last_name', and 'password' to complete your setup.",
+                "token": token
+            }, status=status.HTTP_200_OK)
+        except signing.SignatureExpired:
+            return Response({"error": "This invitation link has expired."}, status=status.HTTP_400_BAD_REQUEST)
+        except signing.BadSignature:
+            return Response({"error": "Invalid invitation link."}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(request=AcceptInvitationSerializer, responses={201: dict})
     def post(self, request):

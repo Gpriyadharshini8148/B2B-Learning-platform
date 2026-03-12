@@ -30,3 +30,4 @@ from .subscription import *
 from .payment import *
 from .department import *
 from .user_department import *
+from .wishlist import *

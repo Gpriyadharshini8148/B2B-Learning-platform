@@ -7,7 +7,8 @@ from django.conf import settings
 from admin.access.models import Role, UserRole
 from admin.organizations.models.organization import Organization
 
-# Keycloak Configuration from Environment Variables or Settings
+# Keycloak Configuration from
+#  Environment Variables or Settings
 KEYCLOAK_SERVER_URL = os.environ.get('KEYCLOAK_SERVER_URL', 'http://127.0.0.1:8080/')
 KEYCLOAK_REALM = os.environ.get('KEYCLOAK_REALM', 'udemy-clone')  
 KEYCLOAK_CLIENT_ID = os.environ.get('KEYCLOAK_CLIENT_ID', 'django-backend')

@@ -70,4 +70,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'\nSuper Admin ready!'))
         self.stdout.write(f'  Email:    {email}')
         self.stdout.write(f'  Password: {password}')
-        self.stdout.write(f'  Login at: POST http://localhost:8000/api/access/auth/keycloak/login/')
+        self.stdout.write(f'  Login at: POST http://localhost:8000/api/access/auth/login/')

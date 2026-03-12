@@ -33,7 +33,6 @@ def access_root(request):
     """
     urls = {
         'login': request.build_absolute_uri('auth/login/'),
-        'keycloak-login': request.build_absolute_uri('auth/keycloak/login/'),
         'organization-signup': request.build_absolute_uri('signup/organization/'),
         'user-signup': request.build_absolute_uri('signup/user/'),
         'verify-otp': request.build_absolute_uri('verify-otp/'),
@@ -59,7 +58,6 @@ urlpatterns = [
     
     # Auth endpoints
     path('auth/login/', KeycloakTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/keycloak/login/', KeycloakTokenObtainPairView.as_view(), name='keycloak_login'),
     path('auth/refresh/', KeycloakTokenRefreshView.as_view(), name='token_refresh'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     
