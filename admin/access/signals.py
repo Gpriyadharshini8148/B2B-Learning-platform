@@ -23,6 +23,77 @@ def send_background_email(subject, message, from_email, recipient_email):
     except Exception as e:
         print(f"Error sending background email to {recipient_email}: {e}")
 
+def create_initial_progress_task(enrollment_id):
+    """Background task to create initial progress for a newly enrolled user."""
+    try:
+        enrollment = Enrollment.objects.get(id=enrollment_id)
+        # 1. Create CourseProgress (Overall % tracker)
+        CourseProgress.objects.get_or_create(enrollment=enrollment)
+
+        # 2. Create LessonProgress entries for every lesson in this course
+        lessons = Lesson.objects.filter(section__course=enrollment.course)
+        for lesson in lessons:
+            LessonProgress.objects.get_or_create(
+                enrollment=enrollment,
+                lesson=lesson
+            )
+    except Exception as e:
+         print(f"Error in create_initial_progress_task for enrollment {enrollment_id}: {e}")
+
+def update_course_progress_task(enrollment_id):
+    """Background task to update course progress percentage."""
+    try:
+        enrollment = Enrollment.objects.get(id=enrollment_id)
+        course = enrollment.course
+        
+        # Total lessons in the course
+        total_lessons = Lesson.objects.filter(section__course=course).count()
+        
+        if total_lessons > 0:
+            # Number of completed lessons for this enrollment
+            # IMPORTANT: Re-import inside if necessary for threads
+            completed_lessons = LessonProgress.objects.filter(
+                enrollment=enrollment, 
+                is_completed=True
+            ).count()
+            
+            progress_percentage = (completed_lessons / total_lessons) * 100
+            
+            # Update or create the course progress
+            progress, _ = CourseProgress.objects.get_or_create(enrollment=enrollment)
+            progress.progress_percentage = round(progress_percentage, 2)
+            
+            if progress_percentage >= 100:
+                progress.completed_at = timezone.now()
+                
+                # Auto-generate secure signed certificate
+                token = signing.dumps({'enrollment_id': enrollment.id})
+                secure_url = f"/api/access/certificates/verify/?token={token}"
+                
+                Certificate.objects.get_or_create(
+                    enrollment=enrollment,
+                    defaults={
+                        'certificate_url': secure_url
+                    }
+                )
+                
+                # Mark enrollment as completed
+                if enrollment.status != 'completed':
+                    enrollment.status = 'completed'
+                    enrollment.save(update_fields=['status'])
+            else:
+                progress.completed_at = None
+                
+                # Clean up certificate if progress drops below 100
+                Certificate.objects.filter(enrollment=enrollment).delete()
+                if enrollment.status == 'completed':
+                    enrollment.status = 'active'
+                    enrollment.save(update_fields=['status'])
+                
+            progress.save()
+    except Exception as e:
+         print(f"Error in update_course_progress_task for enrollment {enrollment_id}: {e}")
+
 # Custom signals for events that don't result in immediate DB records
 organization_provisioned = Signal() # Sent by Super Admin Provisioning View
 organization_requested = Signal()   # Sent by Public Org Signup View
@@ -191,63 +262,8 @@ def create_initial_progress(sender, instance, created, **kwargs):
     when a new Enrollment is created.
     """
     if created:
-        # 1. Create CourseProgress (Overall % tracker)
-        CourseProgress.objects.get_or_create(enrollment=instance)
-
-        # 2. Create LessonProgress entries for every lesson in this course
-        lessons = Lesson.objects.filter(section__course=instance.course)
-        for lesson in lessons:
-            LessonProgress.objects.get_or_create(
-                enrollment=instance,
-                lesson=lesson
-            )
+        executor.submit(create_initial_progress_task, instance.id)
 
 @receiver(post_save, sender=LessonProgress)
 def update_course_progress(sender, instance, **kwargs):
-    """
-    Update CourseProgress percentage when a LessonProgress is saved.
-    """
-    enrollment = instance.enrollment
-    course = enrollment.course
-    
-    # Total lessons in the course
-    total_lessons = Lesson.objects.filter(section__course=course).count()
-    
-    if total_lessons > 0:
-        # Number of completed lessons for this enrollment
-        completed_lessons = LessonProgress.objects.filter(
-            enrollment=enrollment, 
-            is_completed=True
-        ).count()
-        
-        progress_percentage = (completed_lessons / total_lessons) * 100
-        
-        # Update or create the course progress
-        progress, _ = CourseProgress.objects.get_or_create(enrollment=enrollment)
-        progress.progress_percentage = round(progress_percentage, 2)
-        
-        if progress_percentage >= 100:
-            progress.completed_at = timezone.now()
-            
-            # Auto-generate certificate
-            Certificate.objects.get_or_create(
-                enrollment=enrollment,
-                defaults={
-                    'certificate_url': f"https://dummy-certificates.com/{enrollment.id}"
-                }
-            )
-            
-            # Mark enrollment as completed
-            if enrollment.status != 'completed':
-                enrollment.status = 'completed'
-                enrollment.save(update_fields=['status'])
-        else:
-            progress.completed_at = None
-            
-            # Clean up certificate if progress drops below 100
-            Certificate.objects.filter(enrollment=enrollment).delete()
-            if enrollment.status == 'completed':
-                enrollment.status = 'active'
-                enrollment.save(update_fields=['status'])
-            
-        progress.save()
+    executor.submit(update_course_progress_task, instance.enrollment.id)

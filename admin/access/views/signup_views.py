@@ -1,4 +1,5 @@
 import logging
+import threading
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
 from django.core.mail import send_mail
@@ -15,6 +16,25 @@ import datetime
 import string
 import random
 logger = logging.getLogger(__name__)
+
+def background_keycloak_registration(email, password, subdomain, role_name="organization_user"):
+    """Background task to handle Keycloak group creation and user registration."""
+    try:
+        # 1. Ensure Keycloak Group exists
+        if subdomain:
+            create_organization_group(subdomain)
+        
+        # 2. Keycloak Registration
+        register_user_with_role(
+            email=email,
+            role_name=role_name,
+            organization_subdomain=subdomain,
+            password=password,
+            enabled=False # User cannot login until OTP is verified
+        )
+        logger.info(f"Background Keycloak registration successful for {email}")
+    except Exception as e:
+        logger.error(f"Background Keycloak registration failed for {email}: {e}")
 class OrganizationSignupView(views.APIView):
     """
     Public API for Organizations to register.
@@ -126,32 +146,23 @@ class UserSignupView(views.APIView):
             existing_user._is_signup = True
             existing_user.save()
 
-            # Resync keycloak password if they changed it on second attempt
-            register_user_with_role(
-                email=email,
-                role_name="organization_user",
-                organization_subdomain=org.subdomain if org else None,
-                password=password,
-                enabled=False
-            )
+            # Background Keycloak update
+            threading.Thread(
+                target=background_keycloak_registration,
+                args=(email, password, subdomain),
+                daemon=True
+            ).start()
             
             return Response({
                 "message": "otp shared with your email",
             }, status=status.HTTP_200_OK)
 
-        # 1. Ensure Keycloak Group exists for this organization
-        if org:
-            create_organization_group(org.subdomain)
-
-        # 2. Keycloak Registration (Disabled until OTP verification)
-        # We must do this now while we still have access to the plain text password.
-        register_user_with_role(
-            email=email,
-            role_name="organization_user",
-            organization_subdomain=org.subdomain if org else None,
-            password=password,
-            enabled=False # User cannot login until OTP is verified
-        )
+        # Start Keycloak Registration in the background
+        threading.Thread(
+            target=background_keycloak_registration,
+            args=(email, password, subdomain),
+            daemon=True
+        ).start()
 
         # 3. Create User (Pending OTP)
         user = User(

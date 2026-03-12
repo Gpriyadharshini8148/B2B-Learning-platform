@@ -1,9 +1,24 @@
 import json
 import logging
+import threading
 from django.utils.deprecation import MiddlewareMixin
 from admin.access.models.audit_log import AuditLog
 
 logger = logging.getLogger(__name__)
+
+def save_audit_log_task(org, user, method, entity_type, entity_id, metadata_json):
+    """Background task to save audit logs to the database."""
+    try:
+        AuditLog.objects.create(
+            organization=org,
+            user=user,
+            action=method,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            metadata=metadata_json
+        )
+    except Exception as e:
+        logger.error(f"Background audit log failed: {e}")
 
 class AuditLogMiddleware(MiddlewareMixin):
     """
@@ -44,16 +59,11 @@ class AuditLogMiddleware(MiddlewareMixin):
                 "status_code": response.status_code,
             }
 
-            try:
-                AuditLog.objects.create(
-                    organization=org,
-                    user=user,
-                    action=request.method,
-                    entity_type=entity_type,
-                    entity_id=entity_id,
-                    metadata=json.dumps(metadata)
-                )
-            except Exception as e:
-                logger.error(f"Failed to create audit log for {user} on {request.path}: {e}")
+            # Run the database save in a background thread to avoid blocking the main request
+            threading.Thread(
+                target=save_audit_log_task,
+                args=(org, user, request.method, entity_type, entity_id, json.dumps(metadata)),
+                daemon=True
+            ).start()
 
         return response

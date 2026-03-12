@@ -1,4 +1,5 @@
 import logging
+import threading
 from rest_framework import views, status, permissions, serializers
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
@@ -272,9 +273,17 @@ class GenericImportAPIView(views.APIView):
         result = resource.import_data(dataset, dry_run=True)
         
         if not result.has_errors():
-            resource.import_data(dataset, dry_run=False)
+            # Run the actual import (non-dry-run) in a background thread
+            # so the user doesn't have to wait for large datasets to process.
+            threading.Thread(
+                target=resource.import_data,
+                args=(dataset,),
+                kwargs={'dry_run': False},
+                daemon=True
+            ).start()
+
             return Response({
-                "message": f"Successfully imported {len(dataset)} {lookup_name} records.",
+                "message": f"Successfully started import for {len(dataset)} {lookup_name} records. The process will continue in the background.",
                 "totals": result.totals
             })
         else:

@@ -4,4 +4,4 @@ from ..models.user_department import UserDepartment
 class UserDepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserDepartment
-        fields = '__all__'
+        fields = ('id', 'user', 'department')

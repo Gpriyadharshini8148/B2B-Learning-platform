@@ -4,4 +4,4 @@ from ..models.organization_domain import OrganizationDomain
 class OrganizationDomainSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrganizationDomain
-        fields = '__all__'
+        fields = ('id', 'organization', 'domain', 'is_primary', 'is_verified', 'verification_token')

@@ -16,6 +16,7 @@ from .views.logout_views import LogoutView
 from .views.dashboard_views import UserDashboardView
 from .views.password_views import ResetPasswordView
 from .views.image_views import ImageViewSet
+from .views.certificate_views import VerifyCertificateView
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
@@ -66,4 +67,7 @@ urlpatterns = [
     
     # Password endpoint
     path('auth/reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+    
+    # Secure Certificate Verification
+    path('certificates/verify/', VerifyCertificateView.as_view(), name='verify-certificate'),
 ]

@@ -4,7 +4,11 @@ from ..models.organization import Organization
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'subdomain', 'industry', 'is_active', 'is_verified', 
+            'approval_status', 'approval_token', 'email', 'website', 'logo', 
+            'description', 'created_at', 'updated_at'
+        )
         read_only_fields = ['id', 'created_at', 'updated_at', 'approval_token']
 
     def validate_subdomain(self, value):
