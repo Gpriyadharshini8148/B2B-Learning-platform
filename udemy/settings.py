@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     # Third Party
     'import_export',
     'drf_spectacular',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -83,8 +84,6 @@ WSGI_APPLICATION = 'udemy.wsgi.application'
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -136,8 +135,25 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Media Files (Images, Videos) - Configured for AWS S3
+USE_S3 = os.getenv('AWS_STORAGE_BUCKET_NAME') is not None
+
+if USE_S3:
+    # AWS S3 Settings
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    
+    # Storage configuration
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    
+    # URL for media files
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+else:
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 # Default primary key field type
