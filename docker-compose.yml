@@ -31,8 +31,8 @@ services:
     volumes:
       - .:/app
     ports:
-      - "80:8000"
-      - "443:8000"
+      - "8000:8000"
+
 
 
     environment:
