@@ -134,6 +134,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
 
 # Media Files (Images, Videos) - Configured for AWS S3
 USE_S3 = os.getenv('AWS_STORAGE_BUCKET_NAME') is not None
