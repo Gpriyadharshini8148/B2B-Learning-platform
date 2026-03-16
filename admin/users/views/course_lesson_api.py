@@ -2,6 +2,7 @@ from rest_framework import views, permissions, status
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from admin.access.models.enrollment import Enrollment
 from admin.access.models.course import Course
@@ -275,7 +276,6 @@ class MarkLessonCompleteAPIView(views.APIView):
 
         # Auto-complete course if all lessons done
         if completed_count == total_lessons and total_lessons > 0:
-            from django.utils import timezone
             course_progress.completed_at = timezone.now()
             enrollment.status = 'completed'
             enrollment.save()

@@ -31,8 +31,8 @@ def admin_api_root(request, format=None):
         'organizations-cms': reverse('org-root', request=request, format=format),
         'users-cms': reverse('users-root', request=request, format=format),
         'access-cms': reverse('access-root', request=request, format=format),
-        'bulk-import': '/api/admin/bulk-cms/import/{model_name}/',
-        'bulk-export': '/api/admin/bulk-cms/export/{model_name}/',
+        'bulk-import': request.build_absolute_uri('/api/bulk-cms/import/{model_name}/'),
+        'bulk-export': request.build_absolute_uri('/api/bulk-cms/export/{model_name}/'),
         'swagger-docs': reverse('swagger-ui', request=request, format=format),
         'redoc': reverse('redoc', request=request, format=format),
     })

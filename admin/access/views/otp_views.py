@@ -6,8 +6,10 @@ from drf_spectacular.utils import extend_schema
 from admin.organizations.models.organization import Organization
 from admin.access.models.user import User
 from admin.access.authentication.serializers import VerifyOTPSerializer
-from admin.access.authentication.keycloak_manager import register_user_with_role
+from admin.access.authentication.keycloak_manager import register_user_with_role, enable_keycloak_user
 from concurrent.futures import ThreadPoolExecutor
+from admin.access.models.role import Role
+from admin.access.models.user_role import UserRole
 
 class VerifyOTPView(views.APIView):
     """
@@ -53,8 +55,6 @@ class VerifyOTPView(views.APIView):
                 user.save()
 
                 # Assign 'organization_user' role in Django DB
-                from admin.access.models.role import Role
-                from admin.access.models.user_role import UserRole
                 role, _ = Role.objects.get_or_create(
                     name='organization_user',
                     organization=org,
@@ -62,9 +62,7 @@ class VerifyOTPView(views.APIView):
                 )
                 UserRole.objects.get_or_create(user=user, role=role)
 
-                # The user was provisioned in Keycloak (disabled) during signup to securely store their password.
                 # Now that they have verified their OTP, we enable the account so they can login.
-                from admin.access.authentication.keycloak_manager import enable_keycloak_user
                 enable_keycloak_user(user.email)
 
             return Response({"message": "OTP verified successfully. You can now login."}, status=status.HTTP_200_OK)

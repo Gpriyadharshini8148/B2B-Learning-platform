@@ -1,6 +1,7 @@
 from django.db import models
 from .base import BaseModel
 import uuid
+from .role import Role
 
 class User(BaseModel):
     STATUS_CHOICES = [
@@ -53,7 +54,6 @@ class User(BaseModel):
         """
         Checks if the user has an administrative role within their organization.
         """
-        from .role import Role
         admin_roles = [Role.ROLE_CHOICES[0][0], Role.ROLE_CHOICES[1][0]] # super_admin, organization_admin
         return self.user_roles.filter(role__name__in=admin_roles).exists() or self.is_superuser
 

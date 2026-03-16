@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from admin.access.authentication.keycloak_auth import keycloak_openid
+from admin.access.authentication.keycloak_auth import keycloak_openid, KEYCLOAK_CLIENT_ID
+import jwt
+from datetime import datetime
 
 class RefreshTokenSerializer(serializers.Serializer):
     refresh_token = serializers.CharField()
@@ -32,9 +34,7 @@ class RefreshTokenSerializer(serializers.Serializer):
             # DIAGNOSTIC: Keep basic decoding for error cases to help debugging
             token_info = "Could not decode token."
             try:
-                import jwt
                 decoded = jwt.decode(refresh_token, options={"verify_signature": False})
-                from datetime import datetime
                 exp = datetime.fromtimestamp(decoded.get('exp')).strftime('%Y-%m-%d %H:%M:%S') if decoded.get('exp') else 'N/A'
                 token_info = {
                     "client": decoded.get('azp'),
@@ -44,7 +44,6 @@ class RefreshTokenSerializer(serializers.Serializer):
                 pass
 
             if 'invalid_grant' in error_msg or '400' in error_msg:
-                from .keycloak_auth import KEYCLOAK_CLIENT_ID
                 raise serializers.ValidationError({
                     "detail": "Keycloak rejected the refresh token. It might be expired or already used.",
                     "debug_info": {

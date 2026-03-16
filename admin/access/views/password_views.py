@@ -11,6 +11,9 @@ from admin.access.authentication.keycloak_manager import (
     create_organization_group, 
     register_user_with_role
 )
+from admin.organizations.models.organization import Organization
+from admin.access.models.role import Role
+from admin.access.models.user_role import UserRole
 
 class ResetPasswordView(views.APIView):
     """
@@ -92,9 +95,6 @@ class ResetPasswordView(views.APIView):
         except User.DoesNotExist:
             if provisioning_data:
                 # Create the Organization first
-                from admin.organizations.models.organization import Organization
-                from admin.access.models.role import Role
-                from admin.access.models.user_role import UserRole
                 
                 org, _ = Organization.objects.get_or_create(
                     subdomain=provisioning_data['subdomain'],
@@ -141,7 +141,6 @@ class ResetPasswordView(views.APIView):
                 create_organization_group(user.organization.subdomain)
 
             # 2. Get the role from our DB to sync
-            from admin.access.models.user_role import UserRole
             user_role = UserRole.objects.filter(user=user).select_related('role').first()
             role_name = user_role.role.name if user_role else 'organization_user'
 

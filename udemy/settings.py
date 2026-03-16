@@ -153,6 +153,13 @@ if USE_S3:
     
     # URL for media files
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+    
+    # Public access settings
+    AWS_QUERYSTRING_AUTH = False
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
 else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -214,6 +221,10 @@ RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'your_razorpay_key_s
 CSRF_TRUSTED_ORIGINS = [
     'https://13.210.70.66',
     'http://13.210.70.66',
+    'http://15.135.223.69',
+    'https://15.135.223.69',
+    'http://priya-b2b.duckdns.org',
+    'https://priya-b2b.duckdns.org',
 ]
 
 # Essential for Nginx/Load Balancer HTTPS

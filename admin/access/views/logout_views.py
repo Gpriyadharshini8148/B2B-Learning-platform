@@ -2,6 +2,8 @@ from rest_framework import views, status, permissions
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from admin.access.authentication.serializers import LogoutSerializer
+from admin.access.authentication.keycloak_auth import keycloak_openid
+import logging
 
 class LogoutView(views.APIView):
     """
@@ -18,12 +20,10 @@ class LogoutView(views.APIView):
             
             # --- 1. Keycloak Logout ---
             try:
-                from admin.access.authentication.keycloak_auth import keycloak_openid
                 keycloak_openid.logout(refresh_token)
             except Exception as e:
                 # If keycloak logout fails, we still want to clear the local session
                 # but we'll log it.
-                import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Keycloak logout failed: {str(e)}")
 

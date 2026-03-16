@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from admin.access.models.enrollment import Enrollment
@@ -55,7 +56,6 @@ class StudentEnrollmentViewSet(viewsets.ModelViewSet):
         course = serializer.validated_data.get('course')
         
         if Enrollment.objects.filter(user=user, course=course).exists():
-            from rest_framework.exceptions import ValidationError
             raise ValidationError({"message": "You are already enrolled in this course."})
             
         serializer.save(user=user)

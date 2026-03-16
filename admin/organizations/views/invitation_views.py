@@ -16,6 +16,8 @@ from admin.access.authentication.keycloak_manager import (
     setup_base_roles
 )
 from concurrent.futures import ThreadPoolExecutor
+from django.core import signing
+from admin.organizations.models.organization import Organization
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +65,6 @@ class OrgInviteNewUserView(views.APIView):
         )
 
         # Build a signed token that encodes the invitation details securely
-        from django.core import signing
         token_data = {
             'invitation_id': str(invitation.token),   # UUID from the DB record
             'email': email,
@@ -106,7 +107,6 @@ class AcceptInvitationView(views.APIView):
         """
         Validates the invitation token and returns account details.
         """
-        from django.core import signing
         token = request.query_params.get('token')
         
         if not token:
@@ -128,8 +128,6 @@ class AcceptInvitationView(views.APIView):
 
     @extend_schema(request=AcceptInvitationSerializer, responses={201: dict})
     def post(self, request):
-        from django.core import signing
-        from admin.organizations.models.organization import Organization
 
         token = request.data.get('token') or request.query_params.get('token')
         first_name = request.data.get('first_name', '')

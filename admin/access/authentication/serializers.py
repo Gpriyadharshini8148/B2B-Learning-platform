@@ -36,7 +36,6 @@ class KeycloakLoginSerializer(serializers.Serializer):
 
         # 2. Synchronize user with local DB and handle "already logged in" check
         try:
-            from .keycloak_auth import keycloak_openid
             user_info = keycloak_openid.userinfo(token_data['access_token'])
             
             user = User.objects.filter(email=email).first()
