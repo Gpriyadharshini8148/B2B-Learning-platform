@@ -6,7 +6,7 @@ class IsSuperAdmin(permissions.BasePermission):
     Allows access only to super admins.
     """
     def has_permission(self, request, view):
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
         return bool(request.user and (request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email))
 
 class IsOrganizationMember(permissions.BasePermission):
@@ -15,7 +15,7 @@ class IsOrganizationMember(permissions.BasePermission):
     Organization membership is checked at the data level (queryset).
     """
     def has_permission(self, request, view):
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
         
         # Super Admin bypass
         if request.user and (request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email):
@@ -28,7 +28,7 @@ class IsOrganizationAdmin(permissions.BasePermission):
     Allows access to Organization Admins for their own organization data.
     """
     def has_permission(self, request, view):
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
         
         # Super Admin / Staff bypass
         if request.user and (request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email or request.user.is_staff):
@@ -38,7 +38,7 @@ class IsOrganizationAdmin(permissions.BasePermission):
         return bool(request.user and request.user.is_authenticated and getattr(request.user, 'is_org_admin', False))
 
     def has_object_permission(self, request, view, obj):
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
         
         if request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email:
             return True
@@ -64,7 +64,7 @@ class IsOrgAdminOrReadOnly(permissions.BasePermission):
         if not (user and user.is_authenticated):
             return False
 
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
         
         # 1. Super Admin / Staff Bypass
         if user.is_superuser or getattr(user, 'email', '') == super_admin_email or user.is_staff:
@@ -94,7 +94,7 @@ class TenantSafeViewSetMixin:
             
         user = self.request.user
 
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
 
         if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
             return queryset

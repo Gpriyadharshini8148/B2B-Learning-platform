@@ -21,7 +21,7 @@ class OrgCourseViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
 
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
 
         if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
             return queryset
@@ -33,7 +33,7 @@ class OrgCourseViewSet(TenantSafeViewSetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         course = serializer.save(instructor=self.request.user)
         
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
 
         # Automatically map the course to the admin's organization
         if not self.request.user.is_superuser and getattr(self.request.user, 'email', '') != super_admin_email:

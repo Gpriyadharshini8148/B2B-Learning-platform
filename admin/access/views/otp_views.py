@@ -34,7 +34,7 @@ class VerifyOTPView(views.APIView):
                 approval_status='pending_otp'
             )
 
-            # OTP is correct! Clear it.
+            # OTP is correct
             user.otp = None
 
             # If this was the first user of a new organization, update the org status too

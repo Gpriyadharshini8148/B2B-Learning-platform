@@ -39,7 +39,7 @@ def access_root(request):
         'verify-otp': request.build_absolute_uri('verify-otp/'),
     }
 
-    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
 
     if request.user and request.user.is_authenticated and (request.user.is_superuser or getattr(request.user, 'email', '') == super_admin_email):
         urls['users-list'] = request.build_absolute_uri('users/')

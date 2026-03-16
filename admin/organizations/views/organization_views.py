@@ -25,7 +25,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Super Admin / Staff check
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
         if user.is_superuser or getattr(user, 'email', '') == super_admin_email or user.is_staff:
             return Organization.objects.all()
             

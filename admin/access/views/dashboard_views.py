@@ -50,7 +50,7 @@ class UserDashboardView(views.APIView):
             })
 
         # Determine actual role properly from the database or logic
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
 
         role = "user"  # Default fallback
         if user.is_superuser or user.email == super_admin_email:

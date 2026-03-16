@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = 'Creates or updates the Super Admin user in both Django and Keycloak'
 
     def add_arguments(self, parser):
-        parser.add_argument('--email', type=str, default='gpriyadharshini9965@gmail.com')
+        parser.add_argument('--email', type=str, default='')
         parser.add_argument('--password', type=str, default='Gpriya@123')
 
     def handle(self, *args, **options):

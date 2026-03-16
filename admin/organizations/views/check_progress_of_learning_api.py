@@ -14,7 +14,7 @@ class OrgCheckProgressOfLearningViewSet(TenantSafeViewSetMixin, viewsets.ModelVi
 
     def get_queryset(self):
         user = self.request.user
-        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+        super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
         
         if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
             return CourseProgress.objects.all()

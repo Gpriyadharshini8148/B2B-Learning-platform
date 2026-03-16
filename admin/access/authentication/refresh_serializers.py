@@ -30,8 +30,6 @@ class RefreshTokenSerializer(serializers.Serializer):
             }
         except Exception as e:
             error_msg = str(e)
-            
-            # DIAGNOSTIC: Keep basic decoding for error cases to help debugging
             token_info = "Could not decode token."
             try:
                 decoded = jwt.decode(refresh_token, options={"verify_signature": False})

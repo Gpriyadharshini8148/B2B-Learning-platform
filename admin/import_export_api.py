@@ -132,7 +132,7 @@ def get_allowed_queryset(user, model_name):
     base_qs = model.objects.all()
     
     # Super Admin Check
-    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
 
     if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
         return base_qs
@@ -158,7 +158,7 @@ def get_allowed_queryset(user, model_name):
     return base_qs.none()
 
 def enforce_import_data_rules(user, model_name, dataset):
-    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', 'gpriyadharshini9965@gmail.com')
+    super_admin_email = getattr(settings, 'EMAIL_HOST_USER', '')
 
     if user.is_superuser or getattr(user, 'email', '') == super_admin_email:
         return True, dataset, None

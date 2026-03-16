@@ -16,9 +16,6 @@ class OrgApprovalView(views.APIView):
 
     @extend_schema(responses={200: dict, 400: dict})
     def get(self, request, token, action):
-
-        
-
         try:
             # Token expires after 7 days
             data = signing.loads(token, max_age=86400 * 7)
